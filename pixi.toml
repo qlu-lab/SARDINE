@@ -1,0 +1,70 @@
+[workspace]
+name = "sardine"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
+
+# ============================================================
+# Runtime deps only — one feature per language, kept minimal to
+# mirror exactly what each package will declare as its own
+# dependencies (pyproject.toml / DESCRIPTION), so "user-python"
+# and "user-r" below are a close approximation of what an actual
+# end user's environment looks like after `pip install sardine-ewas`
+# or `install.packages("sardine")`.
+# ============================================================
+
+[feature.python-runtime.dependencies]
+python = ">=3.10,<3.14"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+# not a package dependency — included so `pip install` works inside
+# user-python for the built-wheel sanity check, same as a real user's env
+pip = "*"
+
+[feature.r-runtime.dependencies]
+r-base = "*"
+"r-data.table" = "*"
+
+# ============================================================
+# Dev-only extras, layered on top of the runtime features above.
+# ============================================================
+
+[feature.python-dev.dependencies]
+pytest = "*"
+hatchling = "*"
+python-build = "*"
+twine = "*"
+
+[feature.python-dev.tasks]
+test-py = "pytest python/tests"
+build-py = "python -m build python"
+
+[feature.r-dev.dependencies]
+r-devtools = "*"
+r-usethis = "*"
+r-testthat = "*"
+r-roxygen2 = "*"
+r-covr = "*"
+r-pkgdown = "*"
+
+[feature.r-dev.tasks]
+document-r = "Rscript -e 'devtools::document(\"r\")'"
+test-r = "Rscript -e 'devtools::test(\"r\")'"
+check-r = "Rscript -e 'devtools::check(\"r\")'"
+
+# shared, language-agnostic tasks
+[feature.dev-shared.tasks]
+generate-fixtures = "Rscript fixtures/generate_fixtures.R"
+run-test-fixtures = "Rscript fixtures/run_fixture_tests.R"
+
+[environments]
+# Full contributor box: both languages, runtime + dev tooling.
+dev = ["python-runtime", "python-dev", "r-runtime", "r-dev", "dev-shared"]
+
+# Approximates a real end user of the Python package: runtime deps only.
+# Install the built wheel/sdist into this env to sanity-check a clean install.
+user-python = ["python-runtime"]
+
+# Approximates a real end user of the R package: runtime deps only.
+# Install the built tarball into this env to sanity-check a clean install.
+user-r = ["r-runtime"]
