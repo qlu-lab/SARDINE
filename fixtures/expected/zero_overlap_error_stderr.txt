@@ -1,0 +1,4 @@
+[INFO] Start time: <TIMESTAMP>
+[INFO] EWAS sumstats: 10 rows and 4 columns
+[INFO] Clock weights: 331 rows and 2 columns
+[INFO] DNAm covariance matrix: 380 rows and 380 columns

@@ -8,6 +8,7 @@
 # Exits with status 0 if every case passes, 1 otherwise.
 
 suppressMessages(library(data.table))
+options(warn = 1) # print warnings immediately, so they land inside the right case's sink
 
 # Tolerance allowed between actual and expected outputs
 REL_TOL = 1e-8
@@ -38,7 +39,7 @@ build_args = function(row) {
     ewas_pheno_type = row$ewas_pheno_type,
     scale           = row$scale,
     age_adult       = row$age_adult,
-    verbose         = FALSE
+    verbose         = TRUE
   )
   if (!is.na(row$mean_beta)) args$mean_beta = file.path(fixtures_dir, row$mean_beta)
   if (!is.na(row$varY))      args$varY      = row$varY
@@ -46,6 +47,44 @@ build_args = function(row) {
   if (!is.na(row$cox_pi))    args$cox_pi    = row$cox_pi
   if (!is.na(row$cox_E))     args$cox_E     = row$cox_E
   args
+}
+
+# ============================================================
+# Runs sardine() with stdout and the message stream (which carries
+# log_message()'s INFO/NOTE/WARN output) each captured separately.
+# ============================================================
+run_case = function(args) {
+  stdout_con = textConnection("stdout_lines", open = "w", local = TRUE)
+  stderr_con = textConnection("stderr_lines", open = "w", local = TRUE)
+  sink(stdout_con, type = "output")
+  sink(stderr_con, type = "message")
+
+  out = tryCatch(
+    list(ok = TRUE, value = do.call(sardine, args)),
+    error = function(e) list(ok = FALSE, message = conditionMessage(e))
+  )
+
+  sink(type = "message")
+  sink(type = "output")
+  close(stdout_con)
+  close(stderr_con)
+
+  c(out, list(stdout = stdout_lines, stderr = stderr_lines))
+}
+
+# ============================================================
+# Blanks out wall-clock-dependent text (start/end time, elapsed time) so the
+# comparison against the saved fixtures is stable across runs.
+# ============================================================
+normalize_output_lines = function(lines) {
+  lines = gsub("(Start time:).*",   "\\1 <TIMESTAMP>", lines)
+  lines = gsub("(End time:).*",     "\\1 <TIMESTAMP>", lines)
+  lines = gsub("(Elapsed time:).*", "\\1 <ELAPSED>",    lines)
+  lines
+}
+
+read_expected_lines = function(case, kind) {
+  readLines(file.path(expected_dir, paste0(case, "_", kind, ".txt")), warn = FALSE)
 }
 
 # ============================================================
@@ -105,6 +144,30 @@ compare_frames = function(actual, expected, case, kind) {
 }
 
 # ============================================================
+# Compares actual and expected captured output, line by line
+# ============================================================
+compare_lines = function(actual, expected, case, kind) {
+  problems = character(0)
+
+  if (length(actual) != length(expected)) {
+    problems = c(problems, sprintf(
+      "[%s/%s] line count differs: actual=%d expected=%d\n  actual:\n    %s\n  expected:\n    %s",
+      case, kind, length(actual), length(expected),
+      paste(actual, collapse = "\n    "), paste(expected, collapse = "\n    ")))
+    return(problems)
+  }
+
+  bad = which(actual != expected)
+  if (length(bad) > 0) {
+    problems = c(problems, sprintf(
+      "[%s/%s] line(s) %s differ:\n  actual:   %s\n  expected: %s",
+      case, kind, paste(bad, collapse = ","),
+      paste(actual[bad], collapse = " | "), paste(expected[bad], collapse = " | ")))
+  }
+  problems
+}
+
+# ============================================================
 # Runs through all test cases
 # ============================================================
 n_pass = 0
@@ -116,28 +179,36 @@ for (i in seq_len(nrow(manifest))) {
   case = row$case
   args = build_args(row)
 
-  out = tryCatch(
-    list(ok = TRUE, value = do.call(sardine, args)),
-    error = function(e) list(ok = FALSE, message = conditionMessage(e))
-  )
+  out = run_case(args)
+  actual_stdout = normalize_output_lines(out$stdout)
+  actual_stderr = normalize_output_lines(out$stderr)
 
   if (isTRUE(row$expect_error)) {
     expected_msg_path = file.path(expected_dir, paste0(case, "_error.txt"))
     expected_msg = paste(readLines(expected_msg_path, warn = FALSE), collapse = "\n")
 
+    problems = character(0)
     if (out$ok) {
-      n_fail = n_fail + 1
-      all_problems = c(all_problems, sprintf("[%s] expected an error, but succeeded", case))
-      cat(sprintf("[run_fixture_tests] FAIL  %-22s expected an error but succeeded\n", case))
+      problems = c(problems, sprintf("[%s] expected an error, but succeeded", case))
     } else if (!identical(out$message, expected_msg)) {
-      n_fail = n_fail + 1
-      all_problems = c(all_problems, sprintf(
+      problems = c(problems, sprintf(
         "[%s] error message changed:\n  actual:   %s\n  expected: %s",
         case, out$message, expected_msg))
-      cat(sprintf("[run_fixture_tests] FAIL  %-22s error message changed\n", case))
-    } else {
+    }
+
+    problems = c(
+      problems,
+      compare_lines(actual_stdout, read_expected_lines(case, "stdout"), case, "stdout"),
+      compare_lines(actual_stderr, read_expected_lines(case, "stderr"), case, "stderr")
+    )
+
+    if (length(problems) == 0) {
       n_pass = n_pass + 1
       cat(sprintf("[run_fixture_tests] PASS  %-22s (error message matches)\n", case))
+    } else {
+      n_fail = n_fail + 1
+      all_problems = c(all_problems, problems)
+      cat(sprintf("[run_fixture_tests] FAIL  %-22s (%d issue(s))\n", case, length(problems)))
     }
     next
   }
@@ -157,7 +228,9 @@ for (i in seq_len(nrow(manifest))) {
 
   problems = c(
     compare_frames(actual_res,  expected_res,  case, "results"),
-    compare_frames(actual_meta, expected_meta, case, "metadata")
+    compare_frames(actual_meta, expected_meta, case, "metadata"),
+    compare_lines(actual_stdout, read_expected_lines(case, "stdout"), case, "stdout"),
+    compare_lines(actual_stderr, read_expected_lines(case, "stderr"), case, "stderr")
   )
 
   if (length(problems) == 0) {

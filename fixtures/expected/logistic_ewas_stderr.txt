@@ -1,0 +1,21 @@
+[INFO] Start time: <TIMESTAMP>
+[INFO] EWAS sumstats: 395 rows and 4 columns
+[INFO] Clock weights: 331 rows and 2 columns
+[INFO] DNAm covariance matrix: 380 rows and 380 columns
+[INFO] Inferred covariate-adjusted Var(Y) from logistic EWAS sumstats and DNAm_cov_matrix: 1.329806
+[INFO] Converting logistic Y ~ M summary statistics to linear M ~ Y...
+[NOTE] Logistic to linear conversion assumes small effect sizes of Y on M and equal methylation variance between cases and controls.
+[INFO] Removed 1 intercept row(s) from the clock weights.
+[INFO] Number of CpGs in EWAS: 395
+[INFO] Number of CpGs for clock: 330
+[INFO] Number of CpGs in DNAm matrix: 380
+[INFO] Number of overlapping CpGs between EWAS and clock: 330
+[INFO] Number of overlapping CpGs between EWAS and DNAm matrix: 380
+[INFO] Number of overlapping CpGs between clock and DNAm matrix: 320
+[INFO] Final number of overlapping CpGs: 320
+[INFO] Percentage of missed clock CpGs: 3%
+[INFO] Converting final gamma estimate from linear to logistic (log-odds) scale...
+[NOTE] For gamma in a logistic regression of Phenotype ~ Clock: Z and P are inherited from the linear-scale gamma; SE computed from delta-method, so Z != coef/SE for this row. CI should be obtained by transforming the 'linear' gamma CI endpoints.
+[INFO] Analysis complete!
+[INFO] End time: <TIMESTAMP>
+[INFO] Elapsed time: <ELAPSED>

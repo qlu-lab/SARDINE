@@ -16,7 +16,7 @@
 drop_intercept_rows <- function(clock_weights, verbose = TRUE) {
   n_intercept_rows <- sum(grepl("^\\(?intercept\\)?$", clock_weights$CpGmarker, ignore.case = TRUE))
   if (n_intercept_rows > 0) {
-    if (verbose) cat("[INFO] Removed", n_intercept_rows, "intercept row(s) from the clock weights.\n")
+    log_message(verbose, "INFO", "Removed %d intercept row(s) from the clock weights.", n_intercept_rows)
     clock_weights <- clock_weights[!grepl("^\\(?intercept\\)?$", clock_weights$CpGmarker, ignore.case = TRUE), ]
   }
   clock_weights
@@ -53,18 +53,16 @@ summarize_cpg_overlap <- function(ss, cw, Sigma, verbose = TRUE) {
   ClockCpG_coverage_ratio <- N_CpGs_final / N_CpGs_clock
   ClockCpG_missed_ratio <- 1 - N_CpGs_final / N_CpGs_clock
 
-  if (verbose) {
-    cat("[INFO] Number of CpGs in EWAS:", format(N_CpGs_ewas, big.mark = ","), "\n")
-    cat("[INFO] Number of CpGs for clock:", format(N_CpGs_clock, big.mark = ","), "\n")
-    cat("[INFO] Number of CpGs in DNAm matrix:", format(N_CpGs_ref, big.mark = ","), "\n")
+  log_message(verbose, "INFO", "Number of CpGs in EWAS: %s", format(N_CpGs_ewas, big.mark = ","))
+  log_message(verbose, "INFO", "Number of CpGs for clock: %s", format(N_CpGs_clock, big.mark = ","))
+  log_message(verbose, "INFO", "Number of CpGs in DNAm matrix: %s", format(N_CpGs_ref, big.mark = ","))
 
-    cat("[INFO] Number of overlapping CpGs between EWAS and clock:", format(N_CpGs_ewas_clock, big.mark = ","), "\n")
-    cat("[INFO] Number of overlapping CpGs between EWAS and DNAm matrix:", format(N_CpGs_ewas_ref, big.mark = ","), "\n")
-    cat("[INFO] Number of overlapping CpGs between clock and DNAm matrix:", format(N_CpGs_clock_ref, big.mark = ","), "\n")
+  log_message(verbose, "INFO", "Number of overlapping CpGs between EWAS and clock: %s", format(N_CpGs_ewas_clock, big.mark = ","))
+  log_message(verbose, "INFO", "Number of overlapping CpGs between EWAS and DNAm matrix: %s", format(N_CpGs_ewas_ref, big.mark = ","))
+  log_message(verbose, "INFO", "Number of overlapping CpGs between clock and DNAm matrix: %s", format(N_CpGs_clock_ref, big.mark = ","))
 
-    cat("[INFO] Final number of overlapping CpGs:", format(N_CpGs_final, big.mark = ","), "\n")
-    cat("[INFO] Percentage of missed clock CpGs: ", round(ClockCpG_missed_ratio, digits = 2) * 100, "%", "\n", sep = "")
-  }
+  log_message(verbose, "INFO", "Final number of overlapping CpGs: %s", format(N_CpGs_final, big.mark = ","))
+  log_message(verbose, "INFO", "Percentage of missed clock CpGs: %s%%", round(ClockCpG_missed_ratio, digits = 2) * 100)
 
   if (N_CpGs_final == 0) {
     stop("\nERROR! Zero overlapping CpGs found between EWAS, Clock, and Covariance Matrix.", call. = FALSE)
@@ -134,9 +132,7 @@ cap_phenotype_variance <- function(varY, w_T_beta, w_T_Sigma_w, verbose = TRUE) 
       varY, varY_max, varY_ratio
     )
 
-    if (verbose) {
-      cat(sprintf("[INFO] %s\n", msg_capping))
-    }
+    log_message(verbose, "INFO", "%s", msg_capping)
     varY <- varY_max * (1 - 1e-8)
     note_varY_capping <- msg_capping
   }
@@ -262,7 +258,7 @@ estimate_lambda <- function(w_T_beta, w_T_Sigma_w, varY, N) {
 #' }
 #' @noRd
 convert_gamma_to_logistic_scale <- function(gamma, varY, w_T_Sigma_w, varY_ratio, verbose = TRUE) {
-  if (verbose) cat("[INFO] Converting final gamma estimate from linear to logistic (log-odds) scale...\n")
+  log_message(verbose, "INFO", "Converting final gamma estimate from linear to logistic (log-odds) scale...")
 
   if (!is.finite(gamma$sigma_e2) || gamma$sigma_e2 <= 0 ||
       (is.finite(varY_ratio) && varY_ratio > 0.99)) {
@@ -270,7 +266,7 @@ convert_gamma_to_logistic_scale <- function(gamma, varY, w_T_Sigma_w, varY_ratio
       "sigma_e2 = %.6g (varY_ratio = %.6g); logistic-scale gamma not identifiable.",
       gamma$sigma_e2, varY_ratio
     )
-    if (verbose) cat("[WARN]", note_gamma_logistic, "\n")
+    log_message(verbose, "WARN", "%s", note_gamma_logistic)
 
     return(list(
       estimate = NA_real_, variance = NA_real_, se = NA_real_,
@@ -292,14 +288,12 @@ convert_gamma_to_logistic_scale <- function(gamma, varY, w_T_Sigma_w, varY_ratio
     note_gamma_logistic <- paste0("var_gamma_hat_logistic < 0; ", note_gamma_logistic)
   }
 
-  if (verbose) {
-    cat(paste0(
-      "[NOTE] For gamma in a logistic regression of Phenotype ~ Clock: ",
-      "Z and P are inherited from the linear-scale gamma; ",
-      "SE computed from delta-method, so Z != coef/SE for this row. ",
-      "CI should be obtained by transforming the 'linear' gamma CI endpoints.\n"
-    ))
-  }
+  log_message(verbose, "NOTE", paste0(
+    "For gamma in a logistic regression of Phenotype ~ Clock: ",
+    "Z and P are inherited from the linear-scale gamma; ",
+    "SE computed from delta-method, so Z != coef/SE for this row. ",
+    "CI should be obtained by transforming the 'linear' gamma CI endpoints."
+  ))
 
   return(list(
     estimate = gamma_hat_logistic,
@@ -365,12 +359,7 @@ compute_cox_log_hazard_ratio <- function(gamma, kappa_cox, varY_type, verbose = 
     note_gamma_cox <- "Clock-level log hazard ratio. WARNING: varY was user-supplied, so the cox_pi cancellation does NOT hold; this estimate requires varY = pi(1-pi) with a correct cox_pi."
   }
 
-  if (verbose) {
-    cat(sprintf(
-      "[INFO] Clock-level log HR = %.6g (SE %.6g); HR = %.4f\n",
-      gamma_hat_cox, se_gamma_hat_cox, exp(gamma_hat_cox)
-    ))
-  }
+  log_message(verbose, "INFO", "Clock-level log HR = %.6g (SE %.6g); HR = %.4f", gamma_hat_cox, se_gamma_hat_cox, exp(gamma_hat_cox))
 
   return(list(
     estimate = gamma_hat_cox,

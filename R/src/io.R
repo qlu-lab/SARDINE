@@ -12,10 +12,11 @@
 #' @param pattern A regular expression matched against the column names.
 #' @param standard_name The name the matched column is renamed to.
 #' @param col_optional Logical. If `TRUE`, no error is thrown if no match is found. Default FALSE.
+#' @param verbose Logical.
 #'
 #' @return `dt`, with the column renamed (invisible - no console printing).
 #' @noRd
-standardize_column_name <- function(dt, pattern, standard_name, col_optional = FALSE) {
+standardize_column_name <- function(dt, pattern, standard_name, col_optional = FALSE, verbose = TRUE) {
   col_names <- names(dt)
   matched_cols <- grep(pattern, col_names, ignore.case = TRUE, value = TRUE)
 
@@ -28,9 +29,7 @@ standardize_column_name <- function(dt, pattern, standard_name, col_optional = F
     ), call. = FALSE)
   } else {
     if (col_optional) {
-      if (verbose) {
-        cat("[INFO] Optional ", standard_name, " column not found. Looked for pattern: ", pattern, "\n", sep = "")
-      }
+      log_message(verbose, "INFO", "Optional %s column not found. Looked for pattern: %s", standard_name, pattern)
     } else {
       stop(paste0(
         "\nERROR! Missing ", standard_name, " column. Looked for pattern: ", pattern
@@ -89,32 +88,32 @@ read_summary_statistics <- function(ewas_sumstats, N = NULL, verbose = TRUE) {
     table_name = "EWAS sumstats"
   )
 
+  log_message(verbose, "INFO", "EWAS sumstats: %d rows and %d columns", nrow(ss), ncol(ss))
   if (verbose) {
-    cat("[INFO] EWAS sumstats:", nrow(ss), "rows and", ncol(ss), "columns\n")
-    cat("[INFO] EWAS sumstats header:\n")
+    cat("\n[INFO] EWAS sumstats header:\n")
     print(head(ss, 6), digits = 3)
   }
 
-  standardize_column_name(ss, "^(cpgmarker|cpg|marker|probe|id)$", "CpGmarker")
-  standardize_column_name(ss, "^(beta|coef|coeff|estimate)$", "BETA")
-  standardize_column_name(ss, "^(se|std\\.error|std_error|standard_error)$", "SE")
-  standardize_column_name(ss, "^(n|samplesize|n_samples)$", "N")
+  standardize_column_name(ss, "^(cpgmarker|cpg|marker|probe|id)$", "CpGmarker", verbose = verbose)
+  standardize_column_name(ss, "^(beta|coef|coeff|estimate)$", "BETA", verbose = verbose)
+  standardize_column_name(ss, "^(se|std\\.error|std_error|standard_error)$", "SE", verbose = verbose)
+  standardize_column_name(ss, "^(n|samplesize|n_samples)$", "N", verbose = verbose)
 
   # If the user supplied a total sample size, override any N column in the file.
   if (!is.null(N)) {
     if (!is.null(ss$N)) {
-      cat("[INFO] User-supplied N overrides the N column in the EWAS sumstats file.", call. = FALSE)
+      log_message(verbose, "WARN", "User-supplied N overrides the N column in the EWAS sumstats file.")
     }
     data.table::set(ss, j = "N", value = N)
   }
 
   # Remove any CpGs with NA summary stats
   if (any(is.na(ss$BETA))) {
-    if (verbose) cat("[INFO] Dropping", sum(is.na(ss$BETA)), "CpGs with NA BETA from the EWAS summary statistics.\n")
+    log_message(verbose, "INFO", "Dropping %d CpGs with NA BETA from the EWAS summary statistics.", sum(is.na(ss$BETA)))
     ss <- ss[!is.na(ss$BETA), ]
   }
   if (any(is.na(ss$SE))) {
-    if (verbose) cat("[INFO] Dropping", sum(is.na(ss$SE)), "CpGs with NA SE from the EWAS summary statistics.\n")
+    log_message(verbose, "INFO", "Dropping %d CpGs with NA SE from the EWAS summary statistics.", sum(is.na(ss$SE)))
     ss <- ss[!is.na(ss$SE), ]
   }
 
@@ -134,20 +133,49 @@ read_clock_weights <- function(clock, verbose = TRUE) {
     table_name = "clock weights"
   )
 
+  log_message(verbose, "INFO", "Clock weights: %d rows and %d columns", nrow(ck), ncol(ck))
   if (verbose) {
-    cat("[INFO] Clock weights:", nrow(ck), "rows and", ncol(ck), "columns\n")
-    cat("[INFO] Clock weights header:\n")
+    cat("\n[INFO] Clock weights header:\n")
     print(head(ck, 6))
   }
 
   standardize_column_name(
-    ck, "^(cpgmarker|cpg|marker|probe|id|pred\\.var)$", "CpGmarker"
+    ck, "^(cpgmarker|cpg|marker|probe|id|pred\\.var)$", "CpGmarker", verbose = verbose
   )
   standardize_column_name(
-    ck, "^(CoefficientTraining|beta|coef|coeff|estimate|weight)$", "CoefficientTraining"
+    ck, "^(CoefficientTraining|beta|coef|coeff|estimate|weight)$", "CoefficientTraining", verbose = verbose
   )
 
   return(ck)
+}
+
+#' Read the mean DNAm beta-value reference and standardise column names
+#'
+#' Used to convert M-value-scale EWAS summary statistics to the beta-value
+#' scale (see [convert_mvalue_ewas_to_beta_scale()]).
+#'
+#' @param mean_beta Path, `data.frame` or `data.table` with columns
+#'   `CpGmarker` and `beta_bar`.
+#' @param verbose Logical.
+#'
+#' @return A `data.table` with columns `CpGmarker` and `beta_bar`.
+#' @noRd
+read_mean_beta <- function(mean_beta, verbose = TRUE) {
+  mb <- read_delimited_table(
+    mean_beta,
+    table_name = "mean_beta"
+  )
+
+  log_message(verbose, "INFO", "mean_beta: %d rows and %d columns", nrow(mb), ncol(mb))
+  if (verbose) {
+    cat("\n[INFO] mean_beta header:\n")
+    print(head(mb, 6), digits = 3)
+  }
+
+  standardize_column_name(mb, "^(cpgmarker|cpg|marker|probe|id)$", "CpGmarker", verbose = verbose)
+  standardize_column_name(mb, "^(beta_bar|mean_beta|beta_mean|mean_dnam_beta|avg_beta)$", "beta_bar", verbose = verbose)
+
+  return(mb)
 }
 
 #' Read the DNAm variance-covariance matrix and validate its row/col names
@@ -190,9 +218,9 @@ read_dnam_covariance <- function(DNAm_cov_matrix, verbose = TRUE) {
          call. = FALSE)
   }
 
+  log_message(verbose, "INFO", "DNAm covariance matrix: %d rows and %d columns", nrow(Sigma), ncol(Sigma))
   if (verbose) {
-    cat("[INFO] DNAm covariance matrix:", nrow(Sigma), "rows and", ncol(Sigma), "columns\n")
-    cat("[INFO] DNAm covariance matrix header:\n")
+    cat("\n[INFO] DNAm covariance matrix header:\n")
     print(Sigma[seq_len(min(6, nrow(Sigma))), seq_len(min(6, ncol(Sigma)))], digits = 3)
   }
 

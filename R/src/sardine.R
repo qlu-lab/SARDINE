@@ -33,8 +33,9 @@
 #'   same covariate adjustments as the ewas summary stats.
 #' @param mean_beta [optional] dir/to/file containing mean DNAm beta-value at each CpG
 #'   site (expected to be in beta-scale). Needed for M-value to beta-value conversion.
-#'   A data.frame or data.table with 2 columns: CpGmarker, beta_bar. Best if can match with
-#'   the EWAS samples. Default: `NULL`; only needed for M-value to beta-value conversion.
+#'   A data.frame or data.table with 2 columns: CpGmarker, beta_bar. Best if computed
+#'   from the same samples as the EWAS itself. Default: `NULL`; only needed for M-value
+#'   to beta-value conversion.
 #' @param varY Variance of the phenotype used in EWAS: raw phenotype if no
 #'   covariates; residualized phenotype if adjusted for covariates in the EWAS
 #'   model. Default: `NULL`; we can estimate varY using only EWAS sumstats and
@@ -99,15 +100,16 @@ sardine <- function(ewas_sumstats,
   start_time <- Sys.time()
 
   if (verbose) {
-    cat("\n\n************************************************\n")
+    cat("************************************************\n")
     cat("* SARDINE\n")
-    cat("* (C) 2026 Ryan Moreno <rrmoreno@wisc.edu> and\n")
-    cat("*     Yuchang Wu <ywu423@wisc.edu>, University of Wisconsin-Madison\n")
+    cat("* (C) Ryan Moreno <rrmoreno@wisc.edu> and\n")
+    cat("*     Yuchang Wu <ywu423@wisc.edu>, \n")
+    cat("*     University of Wisconsin-Madison, 2026\n")
     cat("* GNU General Public License v3\n")
-    cat("************************************************\n\n")
-
-    cat("[INFO] Start time:", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
+    cat("************************************************\n")
   }
+
+  log_message(verbose, "INFO", "Start time: %s", format(start_time, "%Y-%m-%d %H:%M:%S"))
 
   # ============================================================
   # Check the validity of the parameters
@@ -154,7 +156,7 @@ sardine <- function(ewas_sumstats,
 
     # Warn that it's recommended varY be inferred for Cox models
     if (!is.null(varY)) {
-      if(verbose) cat("[WARN] ewas_model = 'cox' with user-supplied varY: `kappa_cox` no longer cancels, so `log_hr` is sensitive to `cox_pi`. Setting varY = NULL is recommended.\n")
+      log_message(verbose, "WARN", "ewas_model = 'cox' with user-supplied varY: `kappa_cox` no longer cancels, so `log_hr` is sensitive to `cox_pi`. Setting varY = NULL is recommended.")
     }
   }
 
@@ -174,8 +176,7 @@ sardine <- function(ewas_sumstats,
     clock_name <- gsub("\\.csv", "", basename(clock))
 
     if (verbose & !scale & grepl("horvath|pedbe", tolower(clock_name))) {
-      cat("[WARN] Your clock weight filename contains '", clock_name,
-          "' yet you did not scale the point estimate and SE (Z-score and P-value are not affected). Make sure this was intentional.\n", sep = "")
+      log_message(verbose, "WARN", "Your clock weight filename contains '%s' yet you did not scale the point estimate and SE (Z-score and P-value are not affected). Make sure this was intentional.", clock_name)
     }
   }
 
@@ -199,21 +200,20 @@ sardine <- function(ewas_sumstats,
     stop("[ERROR] 'varY' must be non-negative", call. = FALSE)
   }
 
-  
-
   # ============================================================
   # Read and standardize input tables
   # ============================================================
   ss <- read_summary_statistics(ewas_sumstats, N = N, verbose = verbose)
   cw <- read_clock_weights(clock, verbose = verbose)
   Sigma <- read_dnam_covariance(DNAm_cov_matrix, verbose = verbose)
+  mean_beta_df <- if (!is.null(mean_beta)) read_mean_beta(mean_beta, verbose = verbose) else NULL
 
 
   # ============================================================
   # M-value to Beta-value transformation, as necessary
   # ============================================================
   if (tolower(ewas_DNAm_scale) %in% c("m-value", "mvalue", "m")) {
-    ss <- convert_mvalue_ewas_to_beta_scale(ss, mean_beta, ewas_direction, verbose = verbose)
+    ss <- convert_mvalue_ewas_to_beta_scale(ss, mean_beta_df, ewas_direction, verbose = verbose)
   }
 
   # ============================================================
@@ -311,7 +311,7 @@ sardine <- function(ewas_sumstats,
   # ============================================================
   if (ewas_pheno_type == "binary") {
     if (ewas_model == "linear") {
-      if (verbose) cat("[NOTE] EWAS is a linear regression with a binary phenotype; we can still estimate log-odds ratio of Clock on this binary phenotype.\n")
+      log_message(verbose, "NOTE", "EWAS is a linear regression with a binary phenotype; we can still estimate log-odds ratio of Clock on this binary phenotype.")
     }
     gamma_logistic <- convert_gamma_to_logistic_scale(gamma, varY, w_T_Sigma_w, varY_ratio, verbose = verbose)
 
@@ -352,9 +352,7 @@ sardine <- function(ewas_sumstats,
     lambda$variance <- lambda$variance * (scale_factor^2)
     lambda$se <- lambda$se * scale_factor
 
-    if (verbose) {
-      cat("[INFO] Applied clock scaling factor =", scale_factor, "to point estimate and SE", "\n")
-    }
+    log_message(verbose, "INFO", "Applied clock scaling factor = %s to point estimate and SE", scale_factor)
   }
 
   # ============================================================
@@ -464,13 +462,11 @@ sardine <- function(ewas_sumstats,
   end_time <- Sys.time()
   elapsed_seconds <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
-  if (verbose) {
-    cat("\n")
-    cat("[INFO] Analysis complete!\n")
-    cat("[INFO] End time:", format(end_time, "%Y-%m-%d %H:%M:%S"), "\n")
-    cat("[INFO] Elapsed time:", format_elapsed_time(elapsed_seconds), "\n")
-    cat("\n")
-  }
+  if (verbose) cat("\n")
+  log_message(verbose, "INFO", "Analysis complete!")
+  log_message(verbose, "INFO", "End time: %s", format(end_time, "%Y-%m-%d %H:%M:%S"))
+  log_message(verbose, "INFO", "Elapsed time: %s", format_elapsed_time(elapsed_seconds))
+  if (verbose) cat("\n")
 
   return(res)
 }

@@ -5,21 +5,26 @@
 #' Emit a tagged log message, honouring the verbose flag
 #'
 #' Every diagnostic message in the package goes through this function so that
-#' `verbose = FALSE` reliably silences all of them.
+#' `verbose = FALSE` reliably silences all except for warnings.
 #'
 #' @param verbose Logical. When `FALSE` the message is suppressed.
 #' @param level Character tag, one of "INFO", "NOTE" or "WARN".
 #' @param fmt A `sprintf()` format string.
 #' @param ... Values interpolated into `fmt`.
 #'
-#' @return Invisibly `NULL`; called for its side effect.
-#' @noRd
+#' @return Invisibly `NULL`
 log_message <- function(verbose, level, fmt, ...) {
+  if (toupper(level) == "WARN") {
+    log_message(verbose, "INFO", fmt, ...) # Print the message as INFO too
+    warning(sprintf("[%s] %s", level, sprintf(fmt, ...)), call. = FALSE)
+    return(invisible(NULL))
+  }
+
   if (!isTRUE(verbose)) {
     return(invisible(NULL))
   }
   message(sprintf("[%s] %s", level, sprintf(fmt, ...)))
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 #' Append a note to an existing note string without producing "NA; message"

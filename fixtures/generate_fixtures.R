@@ -6,6 +6,7 @@
 # outputs to the test cases should change due to bug fixes, etc.
 
 set.seed(20260917)
+options(warn = 1) # print warnings immediately, so they land inside the right case's sink
 
 suppressMessages(library(data.table))
 
@@ -238,7 +239,7 @@ build_args = function(row) {
     ewas_pheno_type = row$ewas_pheno_type,
     scale           = row$scale,
     age_adult       = row$age_adult,
-    verbose         = FALSE
+    verbose         = TRUE
   )
   if (!is.na(row$mean_beta)) args$mean_beta = file.path(fixtures_dir, row$mean_beta)
   if (!is.na(row$varY))      args$varY      = row$varY
@@ -248,16 +249,50 @@ build_args = function(row) {
   args
 }
 
+# ============================================================
+# Runs sardine() with stdout and the message stream (which carries
+# log_message()'s INFO/NOTE/WARN output) each captured separately.
+# ============================================================
+run_case = function(args) {
+  stdout_con = textConnection("stdout_lines", open = "w", local = TRUE)
+  stderr_con = textConnection("stderr_lines", open = "w", local = TRUE)
+  sink(stdout_con, type = "output")
+  sink(stderr_con, type = "message")
+
+  out = tryCatch(
+    list(ok = TRUE, value = do.call(sardine, args)),
+    error = function(e) list(ok = FALSE, message = conditionMessage(e))
+  )
+
+  sink(type = "message")
+  sink(type = "output")
+  close(stdout_con)
+  close(stderr_con)
+
+  c(out, list(stdout = stdout_lines, stderr = stderr_lines))
+}
+
+# ============================================================
+# Blanks out wall-clock-dependent text (start/end time, elapsed time) so the
+# saved fixtures and later comparisons are stable across runs.
+# ============================================================
+normalize_output_lines = function(lines) {
+  lines = gsub("(Start time:).*",   "\\1 <TIMESTAMP>", lines)
+  lines = gsub("(End time:).*",     "\\1 <TIMESTAMP>", lines)
+  lines = gsub("(Elapsed time:).*", "\\1 <ELAPSED>",    lines)
+  lines
+}
+
 all_ok = TRUE
 
 for (i in seq_len(nrow(manifest))) {
   row = manifest[i]
   args = build_args(row)
 
-  out = tryCatch(
-    list(ok = TRUE, value = do.call(sardine, args)),
-    error = function(e) list(ok = FALSE, message = conditionMessage(e))
-  )
+  out = run_case(args)
+
+  writeLines(normalize_output_lines(out$stdout), file.path(expected_dir, paste0(row$case, "_stdout.txt")))
+  writeLines(normalize_output_lines(out$stderr), file.path(expected_dir, paste0(row$case, "_stderr.txt")))
 
   if (row$expect_error) {
     if (out$ok) {

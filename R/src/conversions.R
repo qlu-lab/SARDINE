@@ -10,31 +10,36 @@
 #' degrades at extreme methylation, so very high or very low CpGs should be
 #' filtered first.
 #'
+#' Best if the mean beta values are computed from the same samples as the EWAS
+#' itself, since the conversion is a local linear approximation evaluated at
+#' these values.
+#'
 #' @param ss EWAS summary statistics on m-value scale, with `CpGmarker`, `BETA`, `SE`.
-#' @param mean_beta Path, `data.frame` or `data.table` with columns
-#'   `CpGmarker` and `beta_bar`. TODO: Move reading in mean_beta into io.R
+#' @param mean_beta_df A `data.table` with columns `CpGmarker` and
+#'   `beta_bar`.
 #' @param ewas_direction Either `"M~Y"` or `"Y~M"`, already normalised.
 #' @param verbose Logical.
 #'
 #' @return The summary statistics on the beta-value scale, restricted to
-#'   CpGs present in `mean_beta`.
+#'   CpGs present in `mean_beta_df`.
 #' @noRd
-convert_mvalue_ewas_to_beta_scale <- function(ss, mean_beta, ewas_direction, verbose = TRUE) {
-  if (is.character(mean_beta)) {
-    mean_beta_df <- data.table::fread(mean_beta)
-  } else {
-    mean_beta_df <- mean_beta
-  }
-
-  if (verbose) {
-    message("Converting M-value EWAS summary statistics to Beta-value scale. It's highly recommended that you remove the CpGs with either very high (e.g. >90%) or very low (e.g. < 10%) methylations...")
+convert_mvalue_ewas_to_beta_scale <- function(ss, mean_beta_df, ewas_direction, verbose = TRUE) {
+  log_message(verbose, "INFO", "Converting M-value EWAS summary statistics to Beta-value scale.")
+  
+  # Check for extreme mean population beta values
+  num_cpgs_low <- sum(mean_beta_df$beta_bar < 0.1, na.rm = TRUE)
+  num_cpgs_high <- sum(mean_beta_df$beta_bar > 0.9, na.rm = TRUE)
+  num_cpgs_total <- nrow(mean_beta_df)
+  
+  if (num_cpgs_low > 0 || num_cpgs_high > 0) {
+    log_message(verbose, "WARN", "Mean beta reference contains %d CpGs with beta < 0.1 and %d CpGs with beta > 0.9 (out of %d total). Conversion from M-value to beta-value scale may be inaccurate for these extreme CpGs.", num_cpgs_low, num_cpgs_high, num_cpgs_total)
   }
 
   match_idx <- match(ss$CpGmarker, mean_beta_df$CpGmarker)
   missing_from_mean_beta_idx <- is.na(match_idx)
 
   if (any(missing_from_mean_beta_idx)) {
-    if (verbose) message(sprintf("[INFO] Dropping %d CpGs from the EWAS summary stats because they are missing from the mean_beta reference.", sum(missing_from_mean_beta_idx)))
+    log_message(verbose, "INFO", "Dropping %d CpGs from the EWAS summary stats because they are missing from the mean_beta reference.", sum(missing_from_mean_beta_idx))
     ss <- ss[!missing_from_mean_beta_idx, ]
     match_idx <- match_idx[!missing_from_mean_beta_idx]
   }
@@ -68,7 +73,7 @@ convert_mvalue_ewas_to_beta_scale <- function(ss, mean_beta, ewas_direction, ver
 #' @return A list with the rescaled `ss`, the `cox_pi` used, and `kappa_cox`.
 #' @noRd
 convert_cox_ewas_to_linear_scale <- function(ss, cox_pi, cox_E, verbose = TRUE) {
-  if (verbose) cat("[INFO] Converting Cox regression summary statistics to linear Y ~ M model...\n")
+  log_message(verbose, "INFO", "Converting Cox regression summary statistics to linear Y ~ M model...")
 
   if (is.null(cox_pi) && is.null(cox_E)) {
     stop("[ERROR]: EWAS is Cox PH model, must provide either `cox_pi` or 'cox_E' and 'N'.", call. = FALSE)
@@ -79,16 +84,14 @@ convert_cox_ewas_to_linear_scale <- function(ss, cox_pi, cox_E, verbose = TRUE) 
     cox_pi <- cox_E / cox_N
   }
 
-  # Check for reasonable cox_pi values. 
+  # Check for reasonable cox_pi values.
   if (!is.finite(cox_pi) || cox_pi <= 0 || cox_pi >= 1) {
     stop(sprintf("[ERROR] cox_pi must be strictly between 0 and 1; got %.6g.", cox_pi), call. = FALSE)
   }
 
   kappa_cox <- (1 - cox_pi) * (-log(1 - cox_pi))
 
-  if (verbose) {
-    cat(sprintf("[INFO] Cox conversion factor kappa(pi) = %.6g (pi = %.6g)\n", kappa_cox, cox_pi))
-  }
+  log_message(verbose, "INFO", "Cox conversion factor kappa(pi) = %.6g (pi = %.6g)", kappa_cox, cox_pi)
 
   ss$BETA <- ss$BETA * kappa_cox
   ss$SE <- ss$SE * kappa_cox
@@ -97,7 +100,7 @@ convert_cox_ewas_to_linear_scale <- function(ss, cox_pi, cox_E, verbose = TRUE) 
 }
 
 #' Convert linear Y ~ M summary statistics to linear M ~ Y
-#' 
+#'
 #' Invert the regression per CpG using summary statistics:
 #'    BETA' = BETA / [BETA² + (N - 2) * SE(BETA)²]
 #'    SE(BETA') = SE(BETA) / [BETA² + (N - 2) * SE(BETA)²]
@@ -111,7 +114,7 @@ convert_cox_ewas_to_linear_scale <- function(ss, cox_pi, cox_E, verbose = TRUE) 
 #' @return The summary statistics in the M ~ Y direction on the linear scale.
 #' @noRd
 convert_linear_y_on_m_ewas_to_m_on_y <- function(ss, verbose = TRUE) {
-  if (verbose) cat("[INFO] Converting linear Y ~ M summary statistics to M ~ Y direction...\n")
+  log_message(verbose, "INFO", "Converting linear Y ~ M summary statistics to M ~ Y direction...")
 
   denom <- ss$BETA^2 + (ss$N - 2) * ss$SE^2
 
@@ -122,13 +125,13 @@ convert_linear_y_on_m_ewas_to_m_on_y <- function(ss, verbose = TRUE) {
 }
 
 #' Convert logistic Y ~ M summary statistics to linear M ~ Y
-#' 
+#'
 #' Conversion uses the reference methylation variance:
-#'    TODO: be specific about the equations 
+#'    TODO: be specific about the equations
 #'
 #' Assumes small effects of Y on M and equal methylation variance in cases
 #' and controls.
-#' 
+#'
 #' @param ss EWAS summary statistics in the Y~M direction for a logistic regression
 #'            using beta-value scale, with `CpGmarker`, `BETA`, `SE`.
 #' @param Sigma Reference DNAm covariance matrix.
@@ -138,10 +141,8 @@ convert_linear_y_on_m_ewas_to_m_on_y <- function(ss, verbose = TRUE) {
 #' @return The summary statistics in the M ~ Y direction on the linear scale.
 #' @noRd
 convert_logistic_y_on_m_ewas_to_linear_m_on_y <- function(ss, Sigma, varY, verbose = TRUE) {
-  if (verbose) {
-    cat("[INFO] Converting logistic Y ~ M summary statistics to linear M ~ Y...\n")
-    cat("[NOTE] Logistic to linear conversion assumes small effect sizes of Y on M and equal methylation variance between cases and controls.")
-  }
+  log_message(verbose, "INFO", "Converting logistic Y ~ M summary statistics to linear M ~ Y...")
+  log_message(verbose, "NOTE", "Logistic to linear conversion assumes small effect sizes of Y on M and equal methylation variance between cases and controls.")
 
   # Convert logistic regression coefficients to linear regression coefficients
   Sigma_aligned = diag(Sigma)[ss$CpGmarker]
@@ -158,7 +159,7 @@ convert_logistic_y_on_m_ewas_to_linear_m_on_y <- function(ss, Sigma, varY, verbo
 #'
 #' For each overlapping CpG, Var(Y) = 1/[N * Var(M) * SE(BETA)²]. The
 #' median across CpGs is taken for stability.
-#' 
+#'
 #' Note: If there are not enough CpGs overlapping both Sigma and the EWAS sumstats
 #' (e.g. if the CpGs were already subset to the CpGs in a single clock), then the
 #' Var(Y) estimate may be unstable/inaccurate/negative.
@@ -167,7 +168,7 @@ convert_logistic_y_on_m_ewas_to_linear_m_on_y <- function(ss, Sigma, varY, verbo
 #'            using beta-value scale, with `CpGmarker`, `SE`, `N`.
 #' @param Sigma Reference DNAm covariance matrix.
 #' @param verbose Logical.
-#' 
+#'
 #' @return A single numeric estimate of Var(Y).
 #' @noRd
 infer_phenotype_variance_from_logistic_y_on_m_ewas <- function(ss, Sigma, verbose = TRUE) {
@@ -180,7 +181,7 @@ infer_phenotype_variance_from_logistic_y_on_m_ewas <- function(ss, Sigma, verbos
   Sigma_subset <- Sigma[cpg_subset, cpg_subset]
   varY_hat <- stats::median(1 / (ss_subset$N * diag(Sigma_subset) * (ss_subset$SE^2)), na.rm = TRUE)
 
-  if (verbose) cat(sprintf("[INFO] Inferred covariate-adjusted Var(Y) from logistic EWAS sumstats and DNAm_cov_matrix: %.6f\n", varY_hat))
+  log_message(verbose, "INFO", "Inferred covariate-adjusted Var(Y) from logistic EWAS sumstats and DNAm_cov_matrix: %.6f", varY_hat)
   return(varY_hat)
 }
 
@@ -189,7 +190,7 @@ infer_phenotype_variance_from_logistic_y_on_m_ewas <- function(ss, Sigma, verbos
 #'
 #' For each overlapping CpG, Var(Y) = Var(M) / (BETA^2 + (N - 2) * SE(BETA)^2). The
 #' median across CpGs is taken for stability.
-#' 
+#'
 #' Note: If there are not enough CpGs overlapping both Sigma and the EWAS sumstats
 #' (e.g. if the CpGs were already subset to the CpGs in a single clock), then the
 #' Var(Y) estimate may be unstable/inaccurate/negative.
@@ -201,7 +202,7 @@ infer_phenotype_variance_from_logistic_y_on_m_ewas <- function(ss, Sigma, verbos
 #'
 #' @return A single numeric estimate of Var(Y).
 #' @noRd
-infer_phenotype_variance_from_linear_m_on_y_ewas <- function(ss, Sigma, verbose=True) {
+infer_phenotype_variance_from_linear_m_on_y_ewas <- function(ss, Sigma, verbose = TRUE) {
   if (!all(c("SE", "N") %in% names(ss))) {
     stop("[ERROR] Var(Y) cannot be inferred from EWAS sumstats because SE and/or N columns are missing.", call. = FALSE)
   }
@@ -216,7 +217,7 @@ infer_phenotype_variance_from_linear_m_on_y_ewas <- function(ss, Sigma, verbose=
 
   varY_hats <- diag(Sigma_subset) / (ss_subset$BETA^2 + (ss_subset$N - 2) * ss_subset$SE^2)
   varY_hat <- stats::median(varY_hats, na.rm = TRUE)
-  
-  if (verbose) cat(sprintf("[INFO] Inferred covariate-adjusted Var(Y) from linear EWAS sumstats and DNAm_cov_matrix: %.6f\n", varY_hat))
+
+  log_message(verbose, "INFO", "Inferred covariate-adjusted Var(Y) from linear EWAS sumstats and DNAm_cov_matrix: %.6f", varY_hat)
   return(varY_hat)
 }
