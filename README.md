@@ -47,7 +47,72 @@ Optional inputs:
   - only used when EWAS model is Cox
   - describe the proportion (or number) of cases at the end of the study
   - exactly one must be provided if the EWAS model is Cox
-  
+
+## Flow chart
+
+How `sardine()` routes inputs to final estimates.
+
+```mermaid
+flowchart TD
+    classDef terminal fill:#0e6b6a,stroke:#0a4f4f,stroke-width:2px,color:#ffffff,font-weight:700
+    classDef process fill:#ffffff,stroke:#2b6e6e,stroke-width:1.5px,color:#16302e
+    classDef decision fill:#eef3f6,stroke:#3d5a66,stroke-width:1.5px,color:#22343b,font-weight:600
+    classDef convert fill:#fbe3c0,stroke:#a8541f,stroke-width:2px,color:#5c3312,font-weight:600
+    classDef error fill:#f8dede,stroke:#9c333a,stroke-width:2px,color:#5c1414,font-weight:600
+
+    START(["EWAS sumstats + Clock weights + DNAm covariance matrix Σ (+ mean_beta if M-value scale)"]):::terminal
+    START --> Q1{"DNAm scale?"}
+
+    Q1 -->|"M-value"| CV1["Convert M-value EWAS → Beta-value scale</br></br>(First-order local-linear approx, at the reference mean β per CpG)"]:::convert
+    Q1 -->|"Beta-value"| Q2
+    CV1 --> Q2{"EWAS model?"}
+
+    Q2 -->|"Cox (Y~M, binary phenotype only)"| CV2["Convert Cox EWAS (Y~M) → linear Y~M scale (Delta-method approx; scaled by κ(π))"]:::convert
+    Q2 -->|"Logistic (Y~M, binary phenotype only)"| Q3log{"Var(Y) supplied?"}
+    Q2 -->|"Linear"| Q4{"Direction = Y~M?"}
+
+    Q3log -->|"No"| INF1["Infer Var(Y) from logistic Y~M sumstats + Σ"]:::convert
+    Q3log -->|"Yes"| CV4["Convert logistic Y~M → linear M~Y (Delta-method / small-effect approx using Σ, Var(Y))"]:::convert
+    INF1 -.->|"EWAS ∩ Σ empty"| ERR1["ERROR: no overlapping CpGs"]:::error
+    INF1 --> CV4
+
+    CV2 --> CV3["Convert linear Y~M → M~Y (exact algebraic sumstat inversion)"]:::convert
+    Q4 -->|"Y~M"| CV3
+    Q4 -->|"M~Y already"| Q5
+
+    CV3 --> Q5{"Var(Y) user-provided (or already estimated in the logistic EWAS model case)"}
+    CV4 --> Q5
+
+    Q5 -->|"No"| INF2["Infer Var(Y) from linear M~Y sumstats and Σ"]:::convert
+    Q5 -->|"Yes"| ALIGN
+    INF2 -.->|"EWAS ∩ Σ empty"| ERR1
+    INF2 --> ALIGN["Align CpGs: EWAS ∩ Clock ∩ Σ"]:::process
+
+    ALIGN --> Q6{"Zero overlap?"}
+    Q6 -->|"Yes"| ERR1
+    Q6 -->|"No"| WBW["Compute wTβ (clock-phenotype signal) and wTΣw (clock variance)"]:::process
+
+    WBW --> Q7{"wTΣw ≤ 0?"}
+    Q7 -->|"Yes"| ERR3["ERROR: non-positive clock variance"]:::error
+    Q7 -->|"No"| CAP["Cap Var(Y) at wTΣw / (wTβ)²</br></br>(shrinks user-supplied Var(Y) if it exceeds the bound implied by wTβ, wTΣw)"]:::process
+
+    CAP --> EST1["Estimate gamma: Phenotype ~ Clock (linear regression)"]:::process
+    EST1 --> EST2["Estimate lambda: Clock ~ Phenotype (linear regression)"]:::process
+
+    EST2 --> Q8{"Binary phenotype?"}
+    Q8 -->|"Yes"| CV5["Convert gamma → logistic (log-odds) scale</br></br>(Delta-method approx, with z and p-values inherited from the linear-scale gamma). Note: for a Cox EWAS model, this is the log-odds ratio for cumulative incidence at end of follow-up, which is distinct from the log-hazard ratio computed later."]:::convert
+    Q8 -->|"No"| Q10
+    CV5 --> Q10{"clock_scale = TRUE? (for Horvath / PedBE clocks)"}
+
+    Q10 -->|"Yes"| RESC["Rescale gamma, gamma_logistic, and lambda by (1 + age_adult); z and p are unaffected"]:::convert
+    Q10 -->|"No"| Q11
+    RESC --> Q11{"Cox model?"}
+
+    Q11 -->|"Yes"| CV6["Compute clock-level log hazard ratio</br></br>(If Var(Y) was inferred, this is an exact algebraic inverse of the earlier Cox conversion using κ(π). Otherwise, this is an approximation and is sensitive to π. z and p are inherited from linear gamma estimate.)"]:::convert
+    Q11 -->|"No"| DONE
+    CV6 --> DONE(["Assemble result: lambda, gamma, gamma_logistic (if binary), log_HR (if Cox)"]):::terminal
+```
+
 ## Development infrastructure and environment management
 
 Set up once with `pixi install` (or let `pixi run` do it lazily on first use). Three environments are defined in `pixi.toml`:
