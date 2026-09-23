@@ -17,10 +17,13 @@ expected_dir  = file.path(fixtures_dir, "expected")
 dir.create(inputs_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(expected_dir, recursive = TRUE, showWarnings = FALSE)
 
-orig_script = file.path(root, "R", "src", "sardine.R")
-stopifnot(file.exists(orig_script))
-invisible(capture.output(source(orig_script)))
-stopifnot(exists("f.aging"))
+package_files = c("utils.R", "io.R", "conversions.R", "estimate.R", "sardine.R", "print.R")
+for (f in package_files) {
+  script_path_i = file.path(root, "R", "src", f)
+  stopifnot(file.exists(script_path_i))
+  invisible(capture.output(source(script_path_i)))
+}
+stopifnot(exists("sardine"))
 
 cat(sprintf("[generate_fixtures] R version: %s\n", R.version.string))
 cat(sprintf("[generate_fixtures] data.table version: %s\n", as.character(packageVersion("data.table"))))
@@ -132,7 +135,7 @@ fwrite(ewas_zero_overlap_ss_dt, file.path(inputs_dir, "ewas_sumstats_zero_overla
 fwrite(clock_weight_dt,   file.path(inputs_dir, "clock_baseline_horvath_named.tsv"), sep = "\t")
 
 # ============================================================
-# Test manifest: one row per test case, with the exact f.aging() arguments.
+# Test manifest: one row per test case, with the exact sardine() arguments.
 # File paths are relative to fixtures/.
 # ============================================================
 
@@ -252,7 +255,7 @@ for (i in seq_len(nrow(manifest))) {
   args = build_args(row)
 
   out = tryCatch(
-    list(ok = TRUE, value = do.call(f.aging, args)),
+    list(ok = TRUE, value = do.call(sardine, args)),
     error = function(e) list(ok = FALSE, message = conditionMessage(e))
   )
 

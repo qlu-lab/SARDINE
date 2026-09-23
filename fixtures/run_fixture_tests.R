@@ -17,10 +17,17 @@ root         = normalizePath(file.path(dirname(this_script_path), ".."))
 fixtures_dir = file.path(root, "fixtures")
 expected_dir = file.path(fixtures_dir, "expected")
 
-orig_script = file.path(root, "R", "src", "sardine.R")
-stopifnot(file.exists(orig_script))
-invisible(capture.output(source(orig_script)))
-stopifnot(exists("f.aging"))
+# Package source, split one file per concern. Sourced in dependency order:
+# utils.R and io.R have no internal dependencies; conversions.R and
+# estimate.R depend on utils.R; sardine.R depends on all of the above;
+# print.R only needs sardine.R's S3 class name.
+package_files = c("utils.R", "io.R", "conversions.R", "estimate.R", "sardine.R", "print.R")
+for (f in package_files) {
+  script_path_i = file.path(root, "R", "src", f)
+  stopifnot(file.exists(script_path_i))
+  invisible(capture.output(source(script_path_i)))
+}
+stopifnot(exists("sardine"))
 
 manifest = fread(file.path(fixtures_dir, "test_manifest.tsv"), sep = "\t", na.strings = "")
 
@@ -114,7 +121,7 @@ for (i in seq_len(nrow(manifest))) {
   args = build_args(row)
 
   out = tryCatch(
-    list(ok = TRUE, value = do.call(f.aging, args)),
+    list(ok = TRUE, value = do.call(sardine, args)),
     error = function(e) list(ok = FALSE, message = conditionMessage(e))
   )
 
