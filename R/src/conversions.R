@@ -62,8 +62,9 @@ convert_mvalue_ewas_to_beta_scale <- function(ss, mean_beta_df, ewas_direction, 
 #'
 #' Multiplies log hazard ratios by kappa(pi) = (1 - pi) * (-log(1 - pi)),
 #' where pi is the proportion of cases at the end of follow-up. This is a
-#' first-order approximation using the delta method. TODO: add some details
-#' on where this equation came from.
+#' first-order approximation using the delta method.
+#'     BETA' = kappa(pi) * BETA
+#'     SE(BETA') = kappa(pi) * SE(BETA)
 #'
 #' @param ss EWAS summary statistics with `BETA`, `SE`, `N`.
 #' @param cox_pi Proportion of cases at the end of the study, or `NULL`.
@@ -127,7 +128,9 @@ convert_linear_y_on_m_ewas_to_m_on_y <- function(ss, verbose = TRUE) {
 #' Convert logistic Y ~ M summary statistics to linear M ~ Y
 #'
 #' Conversion uses the reference methylation variance:
-#'    TODO: be specific about the equations
+#'    Let X = sqrt(1 + 4 * SIGMA * BETA² * Var(Y))
+#'    BETA' = 2 * SIGMA * BETA / (1 + X)
+#'    SE(BETA') = SE(BETA) * (2 * SIGMA / (1 + X)) / X
 #'
 #' Assumes small effects of Y on M and equal methylation variance in cases
 #' and controls.

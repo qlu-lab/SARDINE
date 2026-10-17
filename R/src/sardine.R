@@ -64,16 +64,61 @@
 #' for a Logistic model, `ewas_direction` must be `"Y~M"`, `ewas_model` must be `"logistic"`,
 #' and `ewas_pheno_type` must be `"binary"`.
 #'
-#' @return An object of class `sardine_result`: a `data.frame` of coefficients (lambda, gamma,
-#'   gamma_logistic, log_HR) with a `metadata` attribute carrying CpG overlap counts
-#'   and Var(Y) diagnostics. Retrieve the metadata with `attr(result, "metadata")`.
-#'   TODO: be more specific about the columns in the output and metadata
+#' @return An object of class `sardine_result`: a `data.frame` with one row per
+#'   estimated parameter (`lambda` and `gamma` always; `gamma_logistic` for binary
+#'   phenotypes; `log_HR` for Cox EWAS) and columns:
+#'   \describe{
+#'     \item{model}{EWAS model used, e.g. `"Phenotype ~ Clock (Cox)"`.}
+#'     \item{param}{Parameter being estimated, e.g. `"log_HR"`.}
+#'     \item{coef}{Point estimate for the parameter.}
+#'     \item{SE}{Estimated standard error for the point estimate.}
+#'     \item{z}{Z statistic (estimate / SE). All rows share the z of the linear
+#'       `gamma` test; for `gamma_logistic` the SE comes from the delta method,
+#'       so `z != coef / SE` for that row.}
+#'     \item{p}{Two-sided normal p-value for the estimate, testing the null
+#'       hypothesis that the effect is 0.}
+#'     \item{neglog10p}{-log10(p), computed directly from `z` so it stays finite
+#'       when very small p-values underflow to 0.}
+#'     \item{N}{EWAS sample size: the `N` argument if supplied, otherwise the
+#'       median per-CpG N across the CpGs used.}
+#'     \item{note}{Notes about the specific settings for this row (e.g. log-odds
+#'       vs log_HR), or `NA`.}
+#'   }
+#'   Retrieve the metadata with `attr(result, "metadata")`: a one-row
+#'   `data.frame` with columns:
+#'   \describe{
+#'     \item{N_CpGs_ewas, N_CpGs_clock, N_CpGs_DNAmRef}{Number of CpGs in the
+#'       EWAS, clock, and DNAm reference respectively.}
+#'     \item{N_CpGs_ewas_clock, N_CpGs_ewas_ref, N_CpGs_clock_ref}{Number of CpGs
+#'       overlapping between each pair of inputs.}
+#'     \item{N_CpGs_final}{Number of CpGs in all three inputs; these are the CpGs
+#'       actually used for the association analysis.}
+#'     \item{ClockCpG_coverage_ratio}{Fraction of the clock's CpGs that ended up
+#'       in the final set of CpGs used.}
+#'     \item{ClockCpG_missed_ratio}{1 - `ClockCpG_coverage_ratio`.}
+#'     \item{cox_pi}{Proportion of cases at the end of the study, either input
+#'       directly or computed as `cox_E / median(N)`. `NA` if the EWAS model is
+#'       not Cox.}
+#'     \item{kappa_cox}{Cox conversion factor `(1 - cox_pi) * -log(1 - cox_pi)`
+#'       used to convert between the linear-scale gamma and the Cox
+#'       log hazard ratio. `NA` if the EWAS model is not Cox.}
+#'     \item{varY}{Variance of the phenotype (after any capping), either input
+#'       directly or estimated from the EWAS summary statistics and the DNAm
+#'       reference matrix.}
+#'     \item{varY_type}{`"User_provided"` or `"Inferred"`.}
+#'     \item{varY_ratio}{(varY prior to capping) / (theoretical maximum varY),
+#'       where the maximum is the varY you'd get if the clock explained all of
+#'       the phenotype's variance. Values above 1 trigger capping. `NA` if the
+#'       clock has no correlation with the phenotype.}
+#'     \item{varY_note}{Note about whether varY had to be capped at the
+#'       theoretical maximum, or `NA` if no capping was needed.}
+#'   }
 #'
 #' @examples
 #' \dontrun{
 #' result <- sardine(
 #'   ewas_sumstats   = "sumstats/ewas_sumstats_Age_std.txt",
-#'   clock           = "clocks/Horvath1.csv",
+#'   clock           = "clocks/Hannum.csv",
 #'   DNAm_cov_matrix = "sigma/Sigma_Age_std_N=10880.rds"
 #' )
 #' attr(result, "metadata")
@@ -238,7 +283,6 @@ sardine <- function(ewas_sumstats,
   # ============================================================
   varY_type <- ifelse(!is.null(varY), "User_provided", NA)
   if (ewas_model == "logistic" && is.null(varY)) {
-    # TODO: previous version always did this inference, even if varY was passed in from user. Is that necessary?
     varY <- infer_phenotype_variance_from_logistic_y_on_m_ewas(ss, Sigma, verbose = verbose)
     varY_type <- "Inferred"
   }
@@ -334,8 +378,8 @@ sardine <- function(ewas_sumstats,
 
   # ============================================================
   # Re-scale effect size and SE, as necessary
-  # This is necessary for Horvath1, Horvath2, and PedBE clocks.
-  # TODO: describe why this is necessary
+  # This is necessary for Horvath1, Horvath2, and PedBE clocks
+  # because they apply a scale factor to their clocks.
   # ============================================================
   if (scale) {
     scale_factor <- 1 + age_adult
@@ -373,8 +417,8 @@ sardine <- function(ewas_sumstats,
       param = "lambda",
       coef = lambda$estimate,
       SE = lambda$se,
-      Z = lambda$z,
-      P = lambda$p,
+      z = lambda$z,
+      p = lambda$p,
       N = N,
       note = lambda$note,
       stringsAsFactors = FALSE
@@ -384,8 +428,8 @@ sardine <- function(ewas_sumstats,
       param = "gamma",
       coef = gamma$estimate,
       SE = gamma$se,
-      Z = gamma$z,
-      P = gamma$p,
+      z = gamma$z,
+      p = gamma$p,
       N = N,
       note = gamma$note,
       stringsAsFactors = FALSE
@@ -398,8 +442,8 @@ sardine <- function(ewas_sumstats,
       param = "gamma_logistic",
       coef = gamma_logistic$estimate,
       SE = gamma_logistic$se,
-      Z = gamma_logistic$z,
-      P = gamma_logistic$p,
+      z = gamma_logistic$z,
+      p = gamma_logistic$p,
       N = N,
       note = gamma_logistic$note,
       stringsAsFactors = FALSE
@@ -414,24 +458,18 @@ sardine <- function(ewas_sumstats,
       param = "log_HR",
       coef = cox_log_hr$estimate,
       SE = cox_log_hr$se,
-      Z = cox_log_hr$z,
-      P = cox_log_hr$p,
+      z = cox_log_hr$z,
+      p = cox_log_hr$p,
       N = N,
       note = cox_log_hr$note,
       stringsAsFactors = FALSE
     ))
-
-    # Add columns for hazard ratio and 95% CI, defined only for the log_HR row.
-    # TODO: probably simpler to add this in the previous code chunk res <- ...
-    is_hr <- res$param == "log_HR"
-    z_crit <- stats::qnorm(0.975)
-    res$HR <- ifelse(is_hr, exp(res$coef), NA_real_)
-    res$HR_L95 <- ifelse(is_hr, exp(res$coef - z_crit * res$SE), NA_real_)
-    res$HR_U95 <- ifelse(is_hr, exp(res$coef + z_crit * res$SE), NA_real_)
   }
 
   # Add a -log10p column to avoid underflow issues with very small p-values
-  res$log10_P <- two_sided_neg_log10_pvalue(res$Z)
+  res$neglog10p <- two_sided_neg_log10_pvalue(res$z)
+  res <- res[, c("model", "param", "coef", "SE", "z", "p", "neglog10p", "N", "note")]
+
 
   # Add metadata (number of CpGs, varY diagnostics, etc.)
   res_metadata <- data.frame(

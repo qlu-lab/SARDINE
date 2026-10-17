@@ -15,7 +15,7 @@ print.sardine_result <- function(x, ...) {
   cat(sprintf("SARDINE result: %d CpGs used (%.1f%% of the clock)\n\n",
               metadata$N_CpGs_final, metadata$ClockCpG_coverage_ratio * 100))
 
-  core_columns <- c("model", "param", "coef", "SE", "Z", "P", "log10_P", "N", "note")
+  core_columns <- c("model", "param", "coef", "SE", "z", "p", "neglog10p", "N", "note")
   print(as.data.frame(x)[, intersect(core_columns, names(x)), drop = FALSE], ...)
 
   cat("\nUse attr(x, \"metadata\") for CpG overlap counts and Var(Y) diagnostics.\n")
