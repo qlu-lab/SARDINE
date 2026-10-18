@@ -159,15 +159,16 @@ sardine <- function(ewas_sumstats,
   # Record start time
   start_time <- Sys.time()
 
-  if (verbose) {
-    cat("************************************************\n")
-    cat(sprintf("* SARDINE v%s\n", sardine_version()))
-    cat("* (C) Ryan Moreno <rrmoreno@wisc.edu> and\n")
-    cat("*     Yuchang Wu <ywu423@wisc.edu>, \n")
-    cat("*     University of Wisconsin-Madison, 2026\n")
-    cat("* GNU General Public License v3\n")
-    cat("************************************************\n")
-  }
+  log_message(verbose, NULL, "%s", paste(
+    "************************************************",
+    sprintf("* SARDINE v%s", sardine_version()),
+    "* (C) Ryan Moreno <rrmoreno@wisc.edu> and",
+    "*     Yuchang Wu <ywu423@wisc.edu>, ",
+    "*     University of Wisconsin-Madison, 2026",
+    "* GNU General Public License v3",
+    "************************************************",
+    sep = "\n"
+  ))
 
   log_message(verbose, "INFO", "Start time: %s", format(start_time, "%Y-%m-%d %H:%M:%S"))
 
@@ -249,6 +250,9 @@ sardine <- function(ewas_sumstats,
   }
   if (!is.null(varY) && varY < 0) {
     stop("[ERROR] 'varY' must be non-negative", call. = FALSE)
+  }
+  if (!is.null(varY)) {
+    log_message(verbose, "WARN", "User-supplied varY must be the variance of the phenotype after adjusting for the same covariates as the EWAS (the raw phenotype variance only if the EWAS had no covariates). Set varY = NULL to estimate it from the EWAS summary statistics instead.")
   }
 
   # ============================================================
@@ -508,11 +512,11 @@ sardine <- function(ewas_sumstats,
   end_time <- Sys.time()
   elapsed_seconds <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
-  if (verbose) cat("\n")
+  log_message(verbose, NULL, "")
   log_message(verbose, "INFO", "Analysis complete!")
   log_message(verbose, "INFO", "End time: %s", format(end_time, "%Y-%m-%d %H:%M:%S"))
   log_message(verbose, "INFO", "Elapsed time: %s", format_elapsed_time(elapsed_seconds))
-  if (verbose) cat("\n")
+  log_message(verbose, NULL, "")
 
   return(res)
 }

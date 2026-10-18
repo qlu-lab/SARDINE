@@ -151,7 +151,7 @@ The repo root holds the files both packages share; `pixi run -e dev sync` copies
 
 Fixtures:
 
-- Each fixture case is checked for its results, metadata, error message and printed stdout/stderr (`r/tests/testthat/test-fixtures.R`). The printed-output comparison is skipped on CRAN, where data.table versions (and so its table formatting) vary
+- Each fixture case is checked for its results, metadata, error message and printed stdout/stderr (`r/tests/testthat/test-fixtures.R`).
 - Regenerate fixtures: `pixi run -e dev generate-fixtures`. Only do this when an expected output should change (e.g. a bug fix), and review the diff
 - The version is stored as `<VERSION>` in the expected outputs so bumping the version never requires regenerating them, and time stamps are similarly stored as `<TIMESTAMP>`
 

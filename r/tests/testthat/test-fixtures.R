@@ -1,6 +1,7 @@
 # Runs every case in the shared fixture manifest and checks it against the
 # expected outputs: the results and metadata (numbers within REL_TOL), the error
-# message for cases that should fail, and the printed stdout/stderr line by line.
+# message for cases that should fail, and the printed stdout/stderr line by line
+# (except the table previews; see drop_table_previews()).
 #
 # The fixtures are copied into inst/extdata/fixtures from the repo-level
 # fixtures/ by `pixi run -e dev sync`; edit them there, not here.
@@ -54,7 +55,11 @@ run_case <- function(args) {
   value <- NULL
   error <- NULL
   stderr_lines <- character(0)
-  record <- function(text) stderr_lines <<- c(stderr_lines, strsplit(sub("\n$", "", text), "\n", fixed = TRUE)[[1]])
+  record <- function(text) {
+    lines <- strsplit(sub("\n$", "", text), "\n", fixed = TRUE)[[1]]
+    if (length(lines) == 0) lines <- "" # a blank-line message
+    stderr_lines <<- c(stderr_lines, lines)
+  }
 
   stdout_lines <- utils::capture.output(
     withCallingHandlers(
@@ -82,6 +87,21 @@ normalize_output_lines <- function(lines) {
   lines
 }
 
+# Removes the rows printed under each "[INFO] ... header:" line. Their layout comes
+# from each language's own table printing (here data.table's, which also changes
+# between data.table versions), so they can't be compared across R and Python.
+# The header line itself is kept.
+drop_table_previews <- function(lines) {
+  keep <- rep(TRUE, length(lines))
+  in_preview <- FALSE
+  for (i in seq_along(lines)) {
+    if (in_preview && (lines[i] == "" || grepl("^(\\[|Warning:)", lines[i]))) in_preview <- FALSE
+    if (in_preview) keep[i] <- FALSE
+    if (grepl("^\\[INFO\\] .* header:$", lines[i])) in_preview <- TRUE
+  }
+  lines[keep]
+}
+
 # Compares column by column: numeric columns within REL_TOL, everything else exactly.
 # fread reads an all-NA column as logical, so expected values are coerced to the
 # actual column's type first.
@@ -103,15 +123,12 @@ expect_frame_matches <- function(actual, expected, label) {
   }
 }
 
-# The printed output includes data.table's table previews, whose format changes
-# between data.table versions (e.g. the column-type row), so it is only compared
-# where the package's own dependencies are pinned, not on CRAN's machines.
 expect_output_matches <- function(out, case) {
-  skip_on_cran()
-  expect_identical(normalize_output_lines(out$stdout), read_expected_lines(case, "stdout"),
-                   label = paste(case, "stdout"))
-  expect_identical(normalize_output_lines(out$stderr), read_expected_lines(case, "stderr"),
-                   label = paste(case, "stderr"))
+  for (kind in c("stdout", "stderr")) {
+    expect_identical(drop_table_previews(normalize_output_lines(out[[kind]])),
+                     drop_table_previews(read_expected_lines(case, kind)),
+                     label = paste(case, kind))
+  }
 }
 
 test_that("fixture manifest is available", {

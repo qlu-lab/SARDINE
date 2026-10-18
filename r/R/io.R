@@ -89,10 +89,7 @@ read_summary_statistics <- function(ewas_sumstats, N = NULL, verbose = TRUE) {
   )
 
   log_message(verbose, "INFO", "EWAS sumstats: %d rows and %d columns", nrow(ss), ncol(ss))
-  if (verbose) {
-    cat("\n[INFO] EWAS sumstats header:\n")
-    print(utils::head(ss, 6), digits = 3)
-  }
+  log_table(verbose, "EWAS sumstats header", utils::head(ss, 6), digits = 3)
 
   standardize_column_name(ss, "^(cpgmarker|cpg|marker|probe|id)$", "CpGmarker", verbose = verbose)
   standardize_column_name(ss, "^(beta|coef|coeff|estimate)$", "BETA", verbose = verbose)
@@ -135,10 +132,7 @@ read_clock_weights <- function(clock, verbose = TRUE) {
   )
 
   log_message(verbose, "INFO", "Clock weights: %d rows and %d columns", nrow(ck), ncol(ck))
-  if (verbose) {
-    cat("\n[INFO] Clock weights header:\n")
-    print(utils::head(ck, 6))
-  }
+  log_table(verbose, "Clock weights header", utils::head(ck, 6))
 
   standardize_column_name(
     ck, "^(cpgmarker|cpg|marker|probe|id|pred\\.var)$", "CpGmarker", verbose = verbose
@@ -168,10 +162,7 @@ read_mean_beta <- function(mean_beta, verbose = TRUE) {
   )
 
   log_message(verbose, "INFO", "mean_beta: %d rows and %d columns", nrow(mb), ncol(mb))
-  if (verbose) {
-    cat("\n[INFO] mean_beta header:\n")
-    print(utils::head(mb, 6), digits = 3)
-  }
+  log_table(verbose, "mean_beta header", utils::head(mb, 6), digits = 3)
 
   standardize_column_name(mb, "^(cpgmarker|cpg|marker|probe|id)$", "CpGmarker", verbose = verbose)
   standardize_column_name(mb, "^(beta_bar|mean_beta|beta_mean|mean_dnam_beta|avg_beta)$", "beta_bar", verbose = verbose)
@@ -259,10 +250,8 @@ read_dnam_covariance <- function(DNAm_cov_matrix, verbose = TRUE) {
   }
 
   log_message(verbose, "INFO", "DNAm covariance matrix: %d rows and %d columns", nrow(Sigma), ncol(Sigma))
-  if (verbose) {
-    cat("\n[INFO] DNAm covariance matrix header:\n")
-    print(Sigma[seq_len(min(6, nrow(Sigma))), seq_len(min(6, ncol(Sigma)))], digits = 3)
-  }
+  log_table(verbose, "DNAm covariance matrix header",
+            Sigma[seq_len(min(6, nrow(Sigma))), seq_len(min(6, ncol(Sigma)))], digits = 3)
 
   return(Sigma)
 }

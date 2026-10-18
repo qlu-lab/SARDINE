@@ -4,19 +4,23 @@
 
 #' Emit a tagged log message, honouring the verbose flag
 #'
-#' Every diagnostic message in the package goes through this function so that
-#' `verbose = FALSE` reliably silences all except for warnings.
+#' Every diagnostic message in the package goes through this function, so it
+#' all goes to the message stream (stderr), and `verbose = FALSE` reliably
+#' silences all except for warnings.
 #'
 #' @param verbose Logical. When `FALSE` the message is suppressed.
-#' @param level Character tag, one of "INFO", "NOTE" or "WARN".
+#' @param level Character tag, one of "INFO", "NOTE" or "WARN", or `NULL` to
+#'   print the message without a tag (e.g. the banner or a blank line).
 #' @param fmt A `sprintf()` format string.
 #' @param ... Values interpolated into `fmt`.
 #'
 #' @return Invisibly `NULL`
 #' @noRd
 log_message <- function(verbose, level, fmt, ...) {
-  if (toupper(level) == "WARN") {
-    log_message(verbose, "INFO", fmt, ...) # Print the message as INFO too
+  if (!is.null(level) && toupper(level) == "WARN") {
+    # R holds warnings until the top-level call finishes (unless options(warn = 1)),
+    # so also print the message in place in the log
+    if (isTRUE(verbose)) message(sprintf("[WARN] %s", sprintf(fmt, ...)))
     warning(sprintf("[%s] %s", level, sprintf(fmt, ...)), call. = FALSE)
     return(invisible(NULL))
   }
@@ -24,8 +28,28 @@ log_message <- function(verbose, level, fmt, ...) {
   if (!isTRUE(verbose)) {
     return(invisible(NULL))
   }
-  message(sprintf("[%s] %s", level, sprintf(fmt, ...)))
+  text <- sprintf(fmt, ...)
+  message(if (is.null(level)) text else sprintf("[%s] %s", level, text))
   return(invisible(NULL))
+}
+
+#' Log a preview of a table: a blank line, an "[INFO] <label>:" line, then the
+#' table as print() would show it
+#'
+#' @param verbose Logical. When `FALSE` nothing is printed.
+#' @param label Text for the header line, e.g. "EWAS sumstats header".
+#' @param x The table (or matrix) to preview.
+#' @param ... Passed to `print()`, e.g. `digits`.
+#'
+#' @return Invisibly `NULL`
+#' @noRd
+log_table <- function(verbose, label, x, ...) {
+  if (!isTRUE(verbose)) {
+    return(invisible(NULL))
+  }
+  table_text <- paste(utils::capture.output(print(x, ...)), collapse = "\n")
+  log_message(verbose, NULL, "")
+  log_message(verbose, "INFO", "%s:\n%s", label, table_text)
 }
 
 #' Append a note to an existing note string without producing "NA; message"
