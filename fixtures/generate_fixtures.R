@@ -127,7 +127,9 @@ cat(sprintf("[generate_fixtures] varY (capped case)             = %.6g\n", varY_
 
 fwrite(ewas_ss_dt,      file.path(inputs_dir, "ewas_sumstats_baseline_synthetic.tsv"), sep = "\t")
 fwrite(clock_weight_dt,   file.path(inputs_dir, "clock_weights_baseline_synthetic.tsv"), sep = "\t")
-saveRDS(Sigma,     file.path(inputs_dir, "sigma_baseline_synthetic.rds"))
+sigma_text = matrix(sprintf("%.17g", Sigma), nrow = nrow(Sigma), dimnames = dimnames(Sigma))
+fwrite(data.table(CpGmarker = rownames(Sigma), sigma_text),
+       file.path(inputs_dir, "sigma_baseline_synthetic.tsv"), sep = "\t", quote = FALSE)
 fwrite(mean_beta_dt, file.path(inputs_dir, "mean_beta_ref_baseline_synthetic.tsv"), sep = "\t")
 fwrite(ewas_zero_overlap_ss_dt, file.path(inputs_dir, "ewas_sumstats_zero_overlap_synthetic.tsv"), sep = "\t")
 
@@ -163,7 +165,7 @@ manifest = data.table(
 add_case = function(case, description, expect_error = FALSE,
                      ewas_sumstats = "inputs/ewas_sumstats_baseline_synthetic.tsv",
                      clock = "inputs/clock_weights_baseline_synthetic.tsv",
-                     DNAm_cov_matrix = "inputs/sigma_baseline_synthetic.rds",
+                     DNAm_cov_matrix = "inputs/sigma_baseline_synthetic.tsv",
                      mean_beta = NA_character_,
                      ewas_direction = "M~Y", ewas_model = "linear",
                      ewas_DNAm_scale = "beta", ewas_pheno_type = "continuous",

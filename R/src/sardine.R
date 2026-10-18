@@ -30,7 +30,12 @@
 #' @param clock Epigenetic clock weights: can be a dir/to/clock/file or a 
 #'   data.frame/data.table; must contain columns CpG, CoefficientTraining.
 #' @param DNAm_cov_matrix Variance-covariance matrix for DNAm. Must have the
-#'   same covariate adjustments as the ewas summary stats.
+#'   same covariate adjustments as the ewas summary stats. Can be a
+#'   dir/to/file of a delimited table (e.g. TSV) whose first column holds the
+#'   CpG IDs and whose header lists the same CpG IDs in the same order; a
+#'   dir/to/file.rds containing a matrix; a matrix with CpG rownames and
+#'   colnames; a data.frame of numeric columns with CpG rownames; or a
+#'   data.frame/data.table laid out like the delimited file.
 #' @param mean_beta [optional] dir/to/file containing mean DNAm beta-value at each CpG
 #'   site (expected to be in beta-scale). Needed for M-value to beta-value conversion.
 #'   A data.frame or data.table with 2 columns: CpGmarker, beta_bar. Best if computed

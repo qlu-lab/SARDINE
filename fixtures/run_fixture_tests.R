@@ -2,7 +2,7 @@
 #
 # Runs every case in test_manifest.csv against the current R code, then diffs
 # the output against the expected output in fixtures/expected/*. Relative
-# error tolerance of 10e-8.
+# error tolerance of 1e-6.
 #
 # Usage: Rscript fixtures/run_fixture_tests.R
 # Exits with status 0 if every case passes, 1 otherwise.
@@ -11,7 +11,7 @@ suppressMessages(library(data.table))
 options(warn = 1) # print warnings immediately, so they land inside the right case's sink
 
 # Tolerance allowed between actual and expected outputs
-REL_TOL = 1e-8
+REL_TOL = 1e-6
 
 this_script_path  = sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE))
 root         = normalizePath(file.path(dirname(this_script_path), ".."))

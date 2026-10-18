@@ -13,6 +13,7 @@ Required inputs:
 - EWAS summary statistics
 - clock weights
 - referance methylation variance-covariance matrix
+  - TODO: link our data once we share it
 
 Can handle various types of EWAS summary statistics, based on the following EWAS-generating models:
 

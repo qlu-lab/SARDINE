@@ -178,33 +178,72 @@ read_mean_beta <- function(mean_beta, verbose = TRUE) {
   return(mb)
 }
 
+#' Convert a covariance table with a leading CpG ID column to a matrix
+#'
+#' @param dt A `data.table` whose first column holds CpG IDs and whose remaining
+#'   columns hold the covariances, one column per CpG.
+#'
+#' @return A numeric matrix with rownames taken from the ID column.
+#' @noRd
+covariance_table_to_matrix <- function(dt) {
+  if (ncol(dt) < 2L || !is.character(dt[[1]])) {
+    stop("\nERROR! DNAm_cov_matrix table must have CpG IDs in its first column, ",
+         "followed by one numeric column per CpG.", call. = FALSE)
+  }
+
+  values <- dt[, -1, with = FALSE]
+  non_numeric <- names(values)[!vapply(values, is.numeric, logical(1))]
+  if (length(non_numeric) > 0) {
+    stop("\nERROR! DNAm_cov_matrix has non-numeric covariance columns: ",
+         paste(utils::head(non_numeric, 5), collapse = ", "), call. = FALSE)
+  }
+
+  Sigma <- as.matrix(values)
+  rownames(Sigma) <- dt[[1]]
+  return(Sigma)
+}
+
 #' Read the DNAm variance-covariance matrix and validate its row/col names
 #'
-#' @param DNAm_cov_matrix Either a path to an `.rds` file containing a
-#'   matrix, or a matrix.
+#' @param DNAm_cov_matrix One of:
+#'   \itemize{
+#'     \item a path to a delimited file (e.g. TSV) whose first column holds CpG
+#'       IDs and whose header lists the same CpG IDs in the same order;
+#'     \item a path to an `.rds` file containing a matrix;
+#'     \item a matrix with CpG rownames and colnames;
+#'     \item a `data.frame` of numeric columns with CpG rownames;
+#'     \item a `data.frame`/`data.table` laid out like the delimited file.
+#'   }
 #' @param verbose Logical.
 #'
 #' @return A numeric matrix with identical row and column names.
 #' @noRd
 read_dnam_covariance <- function(DNAm_cov_matrix, verbose = TRUE) {
-  if (is.character(DNAm_cov_matrix) && length(DNAm_cov_matrix) == 1L) {
-    if (file.exists(DNAm_cov_matrix)) {
-      Sigma <- tryCatch(
-        readRDS(DNAm_cov_matrix),
-        error = function(e) {
-          stop("Failed to read DNAm_cov_matrix as .rds: ", conditionMessage(e), call. = FALSE)
-        }
-      )
-      if (!is.matrix(Sigma)) {
-        stop("\nERROR! DNAm_cov_matrix .rds must contain a matrix", call. = FALSE)
-      }
-  } else {
-      stop("\nERROR! DNAm_cov_matrix file not found", call. = FALSE)
-    }
-  } else if (is.matrix(DNAm_cov_matrix)) {
+  is_path <- is.character(DNAm_cov_matrix) && length(DNAm_cov_matrix) == 1L
+
+  if (is.matrix(DNAm_cov_matrix)) {
     Sigma <- DNAm_cov_matrix
+  } else if (is_path && grepl("\\.rds$", DNAm_cov_matrix, ignore.case = TRUE)) {
+    if (!file.exists(DNAm_cov_matrix)) {
+      stop("\nERROR! File not found for DNAm_cov_matrix: ", DNAm_cov_matrix, call. = FALSE)
+    }
+    Sigma <- tryCatch(
+      readRDS(DNAm_cov_matrix),
+      error = function(e) {
+        stop("\nERROR! Failed to read DNAm_cov_matrix as .rds: ", conditionMessage(e), call. = FALSE)
+      }
+    )
+    if (!is.matrix(Sigma)) {
+      stop("\nERROR! DNAm_cov_matrix .rds must contain a matrix", call. = FALSE)
+    }
+  } else if (is.data.frame(DNAm_cov_matrix) && all(vapply(DNAm_cov_matrix, is.numeric, logical(1)))) {
+    # All-numeric data.frame: CpG IDs are expected in its rownames
+    Sigma <- as.matrix(DNAm_cov_matrix)
+  } else if (is_path || is.data.frame(DNAm_cov_matrix)) {
+    Sigma <- covariance_table_to_matrix(read_delimited_table(DNAm_cov_matrix, table_name = "DNAm_cov_matrix"))
   } else {
-    stop("\nERROR! DNAm_cov_matrix must be either a file path or a matrix", call. = FALSE)
+    stop("\nERROR! DNAm_cov_matrix must be a delimited file, an .rds file, a matrix, ",
+         "or a data.frame/data.table", call. = FALSE)
   }
 
   if (is.null(rownames(Sigma)) || is.null(colnames(Sigma))) {
