@@ -1,0 +1,7 @@
+************************************************
+* SARDINE v<VERSION>
+* (C) Ryan Moreno <rrmoreno@wisc.edu> and
+*     Yuchang Wu <ywu423@wisc.edu>, 
+*     University of Wisconsin-Madison, 2026
+* GNU General Public License v3
+************************************************

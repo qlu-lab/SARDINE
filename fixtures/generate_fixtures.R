@@ -18,13 +18,13 @@ expected_dir  = file.path(fixtures_dir, "expected")
 dir.create(inputs_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(expected_dir, recursive = TRUE, showWarnings = FALSE)
 
-package_files = c("utils.R", "io.R", "conversions.R", "estimate.R", "sardine.R", "print.R")
-for (f in package_files) {
-  script_path_i = file.path(root, "R", "src", f)
-  stopifnot(file.exists(script_path_i))
-  invisible(capture.output(source(script_path_i)))
-}
-stopifnot(exists("sardine"))
+# Load the R package from source
+pkgload::load_all(file.path(root, "r"), quiet = TRUE)
+
+# The version is saved as a placeholder in the expected stdout and metadata,
+# so a version bump doesn't require regenerating the expected outputs
+VERSION = trimws(readLines(file.path(root, "VERSION"), warn = FALSE)[1])
+VERSION_PLACEHOLDER = "<VERSION>"
 
 cat(sprintf("[generate_fixtures] R version: %s\n", R.version.string))
 cat(sprintf("[generate_fixtures] data.table version: %s\n", as.character(packageVersion("data.table"))))
@@ -223,6 +223,50 @@ add_case("zero_overlap_error",
          expect_error = TRUE,
          ewas_sumstats = "inputs/ewas_sumstats_zero_overlap_synthetic.tsv")
 
+# Invalid input combinations, which both packages must reject with the same error
+add_case("cox_requires_y_on_m",
+         "cox EWAS given as M~Y",
+         expect_error = TRUE, ewas_model = "cox", ewas_pheno_type = "binary", cox_pi = 0.08)
+
+add_case("cox_requires_binary",
+         "cox EWAS with a continuous phenotype",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "cox", cox_pi = 0.08)
+
+add_case("cox_requires_pi_or_E",
+         "cox EWAS with neither cox_pi nor cox_E",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "cox", ewas_pheno_type = "binary")
+
+add_case("cox_rejects_both_pi_and_E",
+         "cox EWAS with both cox_pi and cox_E",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "cox", ewas_pheno_type = "binary",
+         cox_pi = 0.08, cox_E = 400)
+
+add_case("cox_pi_out_of_range",
+         "cox EWAS with cox_pi outside (0, 1)",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "cox", ewas_pheno_type = "binary",
+         cox_pi = 1.5)
+
+add_case("cox_E_not_positive",
+         "cox EWAS with zero cases (cox_E = 0)",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "cox", ewas_pheno_type = "binary",
+         cox_E = 0, N = 5000)
+
+add_case("logistic_requires_y_on_m",
+         "logistic EWAS given as M~Y",
+         expect_error = TRUE, ewas_model = "logistic", ewas_pheno_type = "binary")
+
+add_case("logistic_requires_binary",
+         "logistic EWAS with a continuous phenotype",
+         expect_error = TRUE, ewas_direction = "Y~M", ewas_model = "logistic")
+
+add_case("m_scale_requires_mean_beta",
+         "M-value EWAS without mean_beta for the M->beta conversion",
+         expect_error = TRUE, ewas_DNAm_scale = "m")
+
+add_case("negative_varY",
+         "user-supplied varY below zero",
+         expect_error = TRUE, varY = -1)
+
 fwrite(manifest, file.path(fixtures_dir, "test_manifest.tsv"), sep = "\t")
 cat(sprintf("[generate_fixtures] wrote test_manifest.tsv with %d cases\n", nrow(manifest)))
 
@@ -275,10 +319,12 @@ run_case = function(args) {
 }
 
 # ============================================================
-# Blanks out wall-clock-dependent text (start/end time, elapsed time) so the
-# saved fixtures and later comparisons are stable across runs.
+# Blanks out wall-clock-dependent text (start/end time, elapsed time) and the
+# SARDINE version so the saved fixtures and later comparisons are stable across
+# runs and releases.
 # ============================================================
 normalize_output_lines = function(lines) {
+  lines = gsub(sprintf("* SARDINE v%s", VERSION), sprintf("* SARDINE v%s", VERSION_PLACEHOLDER), lines, fixed = TRUE)
   lines = gsub("(Start time:).*",   "\\1 <TIMESTAMP>", lines)
   lines = gsub("(End time:).*",     "\\1 <TIMESTAMP>", lines)
   lines = gsub("(Elapsed time:).*", "\\1 <ELAPSED>",    lines)
@@ -312,6 +358,7 @@ for (i in seq_len(nrow(manifest))) {
     } else {
       res  = out$value
       meta = attr(res, "metadata")
+      meta$sardine_version = VERSION_PLACEHOLDER
       fwrite(res,  file.path(expected_dir, paste0(row$case, "_results.tsv")), sep = "\t")
       fwrite(meta, file.path(expected_dir, paste0(row$case, "_metadata.tsv")), sep = "\t")
       cat(sprintf("[generate_fixtures] OK    %-22s %d result row(s)\n", row$case, nrow(res)))

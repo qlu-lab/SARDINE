@@ -1,0 +1,17 @@
+[INFO] Start time: <TIMESTAMP>
+[INFO] EWAS sumstats: 395 rows and 4 columns
+[INFO] Clock weights: 331 rows and 2 columns
+[INFO] DNAm covariance matrix: 380 rows and 380 columns
+[INFO] Inferred covariate-adjusted Var(Y) from linear EWAS sumstats and DNAm_cov_matrix: 1.452134
+[INFO] Removed 1 intercept row(s) from the clock weights.
+[INFO] Number of CpGs in EWAS: 395
+[INFO] Number of CpGs for clock: 330
+[INFO] Number of CpGs in DNAm matrix: 380
+[INFO] Number of overlapping CpGs between EWAS and clock: 330
+[INFO] Number of overlapping CpGs between EWAS and DNAm matrix: 380
+[INFO] Number of overlapping CpGs between clock and DNAm matrix: 320
+[INFO] Final number of overlapping CpGs: 320
+[INFO] Percentage of missed clock CpGs: 3%
+[INFO] Analysis complete!
+[INFO] End time: <TIMESTAMP>
+[INFO] Elapsed time: <ELAPSED>

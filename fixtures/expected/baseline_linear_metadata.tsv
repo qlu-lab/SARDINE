@@ -1,2 +1,2 @@
-N_CpGs_ewas	N_CpGs_clock	N_CpGs_DNAmRef	N_CpGs_ewas_clock	N_CpGs_ewas_ref	N_CpGs_clock_ref	N_CpGs_final	ClockCpG_coverage_ratio	ClockCpG_missed_ratio	cox_pi	kappa_cox	varY	varY_type	varY_ratio	varY_note
-395	330	380	330	380	320	320	0.96969696969697	0.0303030303030303			1.4521336323672	Inferred	6.98855769977708e-05	
+sardine_version	N_CpGs_ewas	N_CpGs_clock	N_CpGs_DNAmRef	N_CpGs_ewas_clock	N_CpGs_ewas_ref	N_CpGs_clock_ref	N_CpGs_final	ClockCpG_coverage_ratio	ClockCpG_missed_ratio	cox_pi	kappa_cox	varY	varY_type	varY_ratio	varY_note
+<VERSION>	395	330	380	330	380	320	320	0.96969696969697	0.0303030303030303			1.4521336323672	inferred	6.98855769977708e-05	

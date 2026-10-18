@@ -25,6 +25,13 @@ pip = "*"
 r-base = "*"
 "r-data.table" = "*"
 
+# Install the tarball built by `build-r` (for the current VERSION) and run
+# sardine()'s help-page example on the bundled sample data. Run these in
+# user-r to confirm the package works with only its declared dependencies.
+[feature.r-runtime.tasks]
+install-r = '''Rscript -e 'install.packages(file.path("dist", sprintf("sardine_%s.tar.gz", readLines("VERSION")[1])), repos = NULL, type = "source")' '''
+example-r = '''Rscript -e 'library(sardine); example(sardine)' '''
+
 # ============================================================
 # Dev-only extras, layered on top of the runtime features above.
 # ============================================================
@@ -49,13 +56,20 @@ r-pkgdown = "*"
 
 [feature.r-dev.tasks]
 document-r = "Rscript -e 'devtools::document(\"r\")'"
-test-r = "Rscript -e 'devtools::test(\"r\")'"
-check-r = "Rscript -e 'devtools::check(\"r\")'"
+# test-r, check-r and build-r first sync VERSION and fixtures/ into r/, so they never use a stale copy
+# test-r runs every R test: the shared fixtures plus the R-only tests in r/tests/testthat/
+test-r = { cmd = "Rscript -e 'devtools::test(\"r\")'", depends-on = ["sync"] }
+check-r = { cmd = "Rscript -e 'devtools::check(\"r\")'", depends-on = ["sync"] }
+# writes dist/sardine_<VERSION>.tar.gz
+build-r = { cmd = "Rscript -e 'dir.create(\"dist\", showWarnings = FALSE); devtools::build(\"r\", path = \"dist\")'", depends-on = ["sync"] }
 
-# shared, language-agnostic tasks
+# Tasks that maintain the files shared by both packages (VERSION, fixtures/)
 [feature.dev-shared.tasks]
+# writes the shared expected outputs in fixtures/, using the R package as the reference implementation
 generate-fixtures = "Rscript fixtures/generate_fixtures.R"
-run-test-fixtures = "Rscript fixtures/run_fixture_tests.R"
+# copy VERSION and fixtures/ into the R and Python packages; --check only reports but doesn't copy
+sync = "python tools/sync.py"
+check-sync = "python tools/sync.py --check"
 
 [environments]
 # Full contributor box: both languages, runtime + dev tooling.

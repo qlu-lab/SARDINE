@@ -1,0 +1,1 @@
+[ERROR] cox_pi must be strictly between 0 and 1; got 1.5.

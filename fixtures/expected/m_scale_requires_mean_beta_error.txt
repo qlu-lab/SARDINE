@@ -1,0 +1,1 @@
+[ERROR] 'mean_beta' must be provided when 'ewas_DNAm_scale' is an M-value scale.

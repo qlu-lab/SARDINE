@@ -1,0 +1,1 @@
+[ERROR] 'ewas_pheno_type' must be 'binary' when 'ewas_model' is 'cox'.

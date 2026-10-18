@@ -1,0 +1,1 @@
+[ERROR] 'ewas_direction' must be 'Y~M' when 'ewas_model' is 'cox'.

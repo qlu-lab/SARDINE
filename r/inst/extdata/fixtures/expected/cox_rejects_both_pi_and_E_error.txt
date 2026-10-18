@@ -1,0 +1,1 @@
+[ERROR] Exactly one of 'cox_pi' or 'cox_E' must be provided when 'ewas_model' is 'cox'.
