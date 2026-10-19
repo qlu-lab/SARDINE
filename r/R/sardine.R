@@ -157,6 +157,12 @@ sardine <- function(ewas_sumstats,
                     cox_E = NULL,
                     verbose = TRUE) {
 
+  # Print warnings immediately, in place in the log, rather than after sardine()
+  # returns (R's default). Never lowers a stricter user setting (e.g. warn = 2),
+  # and restores the user's setting on exit.
+  old_options <- options(warn = max(1, getOption("warn")))
+  on.exit(options(old_options), add = TRUE)
+
   # Record start time
   start_time <- Sys.time()
 

@@ -17,7 +17,6 @@
 4: cg00000004 -0.027743 0.01972  5000
 5: cg00000005  0.015825 0.00523  5000
 6: cg00000006  0.000584 0.00806  5000
-[WARN] User-supplied N overrides the N column in the EWAS sumstats file.
 Warning: [WARN] User-supplied N overrides the N column in the EWAS sumstats file.
 [INFO] Clock weights: 331 rows and 2 columns
 

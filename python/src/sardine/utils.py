@@ -90,10 +90,6 @@ def log_message(verbose, level, fmt, *args):
     values interpolated into it.
     """
     if level is not None and level.upper() == "WARN":
-        # Kept in step with the R package, which also prints the warning in place
-        # because R holds warnings until the top-level call finishes
-        if verbose:
-            print(sprintf("[WARN] %s", sprintf(fmt, *args)), file=sys.stderr)
         warnings.warn(
             sprintf("[%s] %s", level, sprintf(fmt, *args)), SardineWarning, stacklevel=3
         )

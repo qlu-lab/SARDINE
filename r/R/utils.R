@@ -18,9 +18,6 @@
 #' @noRd
 log_message <- function(verbose, level, fmt, ...) {
   if (!is.null(level) && toupper(level) == "WARN") {
-    # R holds warnings until the top-level call finishes (unless options(warn = 1)),
-    # so also print the message in place in the log
-    if (isTRUE(verbose)) message(sprintf("[WARN] %s", sprintf(fmt, ...)))
     warning(sprintf("[%s] %s", level, sprintf(fmt, ...)), call. = FALSE)
     return(invisible(NULL))
   }

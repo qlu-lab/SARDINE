@@ -6,7 +6,6 @@
 * GNU General Public License v3
 ************************************************
 [INFO] Start time: <TIMESTAMP>
-[WARN] User-supplied varY must be the variance of the phenotype after adjusting for the same covariates as the EWAS (the raw phenotype variance only if the EWAS had no covariates). Leave varY unset to estimate it from the EWAS summary statistics instead.
 Warning: [WARN] User-supplied varY must be the variance of the phenotype after adjusting for the same covariates as the EWAS (the raw phenotype variance only if the EWAS had no covariates). Leave varY unset to estimate it from the EWAS summary statistics instead.
 [INFO] EWAS sumstats: 395 rows and 4 columns
 
