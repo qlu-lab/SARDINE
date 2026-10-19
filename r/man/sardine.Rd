@@ -41,9 +41,7 @@ or \code{"cox"} (Cox proportional hazards).}
 of clock on phenotype.
 
 For all four options above, matching ignores case and whitespace
-(e.g. \code{"y ~ m"} is accepted as \code{"Y~M"}). See
-\url{https://github.com/qlu-lab/SARDINE/blob/main/inputs.md} for details on
-every input.}
+(e.g. \code{"y ~ m"} is accepted as \code{"Y~M"}).}
 
 \item{clock}{Epigenetic clock weights: can be a dir/to/clock/file or a
 data.frame/data.table; must contain columns CpG, CoefficientTraining.}
@@ -150,6 +148,9 @@ phenotype on the clock. Binary phenotypes additionally yield
 \code{gamma_logistic}, a log-odds ratio. Cox-model inputs additionally
 yield \code{log_HR}, a clock-level log hazard ratio. All rows share the same Z
 statistic and p-value by construction.
+
+See \url{https://github.com/qlu-lab/SARDINE/blob/main/inputs.md} for details on
+every input.
 }
 \section{Cox models}{
 

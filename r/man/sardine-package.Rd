@@ -20,6 +20,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Ryan Moreno \email{rrmoreno@wisc.edu}
   \item Yuchang Wu \email{ywu423@wisc.edu}
 }
 

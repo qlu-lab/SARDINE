@@ -214,7 +214,7 @@ The R package lives in `r/` (code in `r/R/`, tests in `r/tests/testthat/`). `NAM
 
 ### Publishing an update
 
-The R and Python packages are always released together, with the same version number, and only once both pass the same fixtures.
+The R and Python packages should always be released together, with the same version number, and only once both pass the same fixtures.
 
 1. **Make and test the change in both packages.** Any change to behavior, inputs or outputs goes into both the R and Python code. If the change should alter an expected output, update `fixtures/` (manually or via `generate-fixtures` or a new case) and check that both packages match it.
 2. **Bump `VERSION`** at the repo root, following [semantic versioning](https://semver.org): patch (`0.1.1`) for bug fixes, minor (`0.2.0`) for new features, major (`1.0.0`) for changes that break existing code. Use plain `X.Y.Z`, which is valid for both CRAN and PyPI. Never edit the version in `r/DESCRIPTION` or `python/src/sardine/_version.py` directly.
