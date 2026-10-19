@@ -27,7 +27,8 @@ pip = "*"
 # its declared dependencies.
 [feature.python-runtime.tasks]
 install-py = '''python -c "import subprocess, sys; v = open('VERSION').read().strip(); subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', f'dist/sardine_ewas-{v}-py3-none-any.whl']); subprocess.check_call([sys.executable, '-m', 'pip', 'check'])" '''
-example-py = '''python -c "import sardine; print(sardine.example())" '''
+# example-py runs the example both from Python and through the installed `sardine` command
+example-py = '''python -c "import sardine; print(sardine.example())" && sardine --example'''
 
 [feature.r-runtime.dependencies]
 r-base = "*"

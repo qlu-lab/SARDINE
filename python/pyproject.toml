@@ -30,6 +30,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
+[project.scripts]
+sardine = "sardine.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/qlu-lab/SARDINE"
 Issues = "https://github.com/qlu-lab/SARDINE/issues"

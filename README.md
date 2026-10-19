@@ -12,7 +12,7 @@ install.packages("sardine")
 ```
 
 ```sh
-# Python
+# Python (also installs the `sardine` command-line tool)
 pip install sardine-ewas
 ```
 
@@ -27,6 +27,9 @@ example(sardine)
 ```sh
 # Python
 python -c "import sardine; print(sardine.example())"
+
+# Command line
+sardine --example
 ```
 
 ## Quick start
@@ -54,6 +57,48 @@ result = sardine.sardine(
 )
 print(result)  # the estimates (also a DataFrame in result.results)
 result.metadata  # CpG overlap counts and Var(Y) diagnostics
+```
+
+```sh
+# Command line: writes results/my_trait_results.tsv and results/my_trait_metadata.tsv
+sardine --ewas_sumstats ewas_sumstats.tsv \
+        --clock clock_weights.tsv \
+        --DNAm_cov_matrix dnam_covariance.tsv \
+        --out results/my_trait
+```
+
+## Command-line interface
+
+Installing the Python package (`pip install sardine-ewas`) also installs a `sardine` command, so you can run SARDINE without writing any R or Python code. `python -m sardine` runs the same command.
+
+Each option has the same name as the corresponding input (see [Inputs](#inputs) and [inputs.md](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md)), and accepts the same values:
+
+```sh
+sardine --ewas_sumstats FILE --clock FILE --DNAm_cov_matrix FILE --out PREFIX
+        [--ewas_direction {M~Y,Y~M}] [--ewas_model {linear,logistic,cox}]
+        [--ewas_DNAm_scale {beta,m}] [--ewas_pheno_type {continuous,binary}]
+        [--mean_beta FILE] [--varY NUMBER] [--N NUMBER]
+        [--cox_pi NUMBER] [--cox_E NUMBER] [--scale] [--age_adult NUMBER]
+        [--quiet] [--example] [--version]
+```
+
+Run `sardine --help` for a description of every option. `sardine --example` runs SARDINE on the small sample dataset bundled with the package and prints the result, without needing any other options, which is a quick check that the installation works.
+
+The progress log and warnings go to stderr, so you can save them separately, e.g. `sardine ... 2> my_trait.log`. The command exits with status 0 on success and 1 if an input is invalid, printing the reason (e.g. `[ERROR] 'ewas_direction' must be 'Y~M' when 'ewas_model' is 'cox'.`).
+
+Examples:
+
+```sh
+# Cox EWAS, with 400 cases at the end of the study
+sardine --ewas_sumstats ewas_cox.tsv --clock clock_weights.tsv --DNAm_cov_matrix dnam_covariance.tsv \
+        --ewas_direction Y~M --ewas_model cox --ewas_pheno_type binary --cox_E 400 \
+        --out results/incident_disease
+
+# Logistic EWAS of a binary trait, with M-value methylation
+sardine --ewas_sumstats ewas_logistic.tsv --clock clock_weights.tsv --DNAm_cov_matrix dnam_covariance.tsv \
+        --ewas_direction Y~M --ewas_model logistic --ewas_pheno_type binary \
+        --ewas_DNAm_scale m --mean_beta mean_beta.tsv \
+        --out results/case_control
 ```
 
 ## Algorithm overview
@@ -162,7 +207,7 @@ Run any command inside an environment with `pixi run -e <env> <command>`, or dro
 | --- | --- |
 | `pixi run -e dev test-r` | Every R test: all shared fixture cases plus the R-only tests (e.g. covariance matrix given as an R object) |
 | `pixi run -e dev check-r` | `R CMD check`: builds the package, runs `test-r` and the `example(sardine)` example, and checks the docs and package structure, as CRAN does |
-| `pixi run -e dev test-py` | Every Python test: all shared fixture cases plus the Python-only tests (e.g. covariance matrix given as a DataFrame) |
+| `pixi run -e dev test-py` | Every Python test: all shared fixture cases plus the Python-only tests (e.g. covariance matrix given as a DataFrame, and the command-line interface) |
 | `pixi run -e dev check-py` | Runs `test-py`, builds the Python package, and checks that it will render correctly on PyPI (`twine check`). The Python counterpart of `check-r` |
 | `pixi run -e dev check-sync` | That the shared files match their copies in the packages |
 
@@ -189,7 +234,7 @@ Fixtures:
 
 ### Python
 
-The Python package lives in `python/` (code in `python/src/sardine/`, tests in `python/tests/`). It mirrors the R package file for file (`utils.py` ↔ `utils.R`, `io.py` ↔ `io.R`, and so on, with `result.py` ↔ `print.R`) with the same function names.
+The Python package lives in `python/` (code in `python/src/sardine/`, tests in `python/tests/`). It mirrors the R package file for file (`utils.py` ↔ `utils.R`, `io.py` ↔ `io.R`, and so on, with `result.py` ↔ `print.R`) with the same function names. The command-line interface (`cli.py`, also run by `__main__.py`) is Python-only; it is a thin wrapper that parses the options, calls `sardine()`, and writes the two output TSV files. The `sardine` command itself is declared under `[project.scripts]` in `python/pyproject.toml`.
 
 - Run all Python tests: `pixi run -e dev test-py` (see [Running the tests](#running-the-tests))
 - Build the package: `pixi run -e dev build-py`: builds `dist/sardine_ewas-<VERSION>-py3-none-any.whl` and `dist/sardine_ewas-<VERSION>.tar.gz`
@@ -197,7 +242,7 @@ The Python package lives in `python/` (code in `python/src/sardine/`, tests in `
 - Sanity-check a clean install in the minimal `user-python` environment, which has only the runtime dependencies:
   1. `pixi run -e dev build-py`: builds the wheel
   2. `pixi run -e user-python install-py`: installs that wheel and checks its declared dependencies are satisfied (`pip check`)
-  3. `pixi run -e user-python example-py`: runs `sardine.example()` on the bundled sample data, as a user would
+  3. `pixi run -e user-python example-py`: runs the example on the bundled sample data as a user would, both from Python (`sardine.example()`) and through the installed command (`sardine --example`)
 
 ### R
 

@@ -109,3 +109,9 @@ SARDINE uses only the CpGs present in all three of the summary statistics, the c
 - **`cox_pi`**: the proportion of cases at the end of the study (Cox only).
 - **`cox_E`**: the number of cases at the end of the study (Cox only). `cox_pi` is then computed as `cox_E / N`.
 - **`scale`** and **`age_adult`**: for the Horvath and PedBE clocks, which predict a transformed age. With `scale = TRUE`, the clock-scale estimates are divided by `1 + age_adult` (and `lambda` is multiplied by it). This changes the estimates and standard errors, but not the z-statistics or p-values.
+
+## CLI-specific inputs
+
+- **`--out PREFIX`**: CLI tool only. SARDINE writes the estimates to `PREFIX_results.tsv` and the metadata to `PREFIX_metadata.tsv`, both tab-separated with the columns described in [Outputs](#outputs). If `--out` is a folder (it ends with `/`, e.g. `--out results/my_trait/`, or is an existing folder), the files are written inside it as `results.tsv` and `metadata.tsv`. The output folder is created if needed.
+- **`--quiet`**: turns off the progress log (equivalent to `verbose=FALSE`). Warnings still print.
+- For the CLI tool, the tabular inputs must be a file path.
