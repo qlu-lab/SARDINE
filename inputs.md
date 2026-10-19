@@ -26,7 +26,7 @@ Not every combination of these is valid; for example, a logistic or Cox EWAS mus
 
 ## Tabular inputs
 
-Every table can be given as a path to a delimited file (TSV, CSV or anything else `data.table::fread()` detects), or in R as a `data.frame` or `data.table`. Column names are matched case-insensitively against the names listed for each column.
+Every table can be given as a path to a delimited file (tab-, comma-, semicolon-, pipe- or whitespace-separated; a `.gz`-compressed file also works), in R as a `data.frame` or `data.table`, or in Python as a pandas `DataFrame`. Column names are matched case-insensitively against the names listed for each column.
 
 ### EWAS summary statistics (`ewas_sumstats`)
 
@@ -81,6 +81,11 @@ In R, these forms also work:
 - a matrix with CpG IDs as its row and column names;
 - a `data.frame` of numeric columns with CpG IDs as its row names;
 - a `data.frame` or `data.table` with CpG IDs in the first column, laid out like the tsv file.
+
+In Python, these forms also work:
+
+- a pandas `DataFrame` of numeric columns with CpG IDs as its index and column names;
+- a pandas `DataFrame` with CpG IDs in the first column, laid out like the tsv file.
 
 Row and column names must be identical and in the same order.
 

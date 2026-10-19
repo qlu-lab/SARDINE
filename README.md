@@ -2,8 +2,6 @@
 
 This repository contains the source code for both the R package (`sardine`) and the Python package (`sardine-ewas`). Shared test fixtures ensure that the two packages behave the same, and both are released together under the same version number.
 
-TODO: Python version not implemented yet, but placeholders are below in the README.
-
 ## Installation
 
 TODO: This won't work until published publicly.
@@ -28,7 +26,34 @@ example(sardine)
 
 ```sh
 # Python
-# TODO
+python -c "import sardine; print(sardine.example())"
+```
+
+## Quick start
+
+```r
+# R
+library(sardine)
+result <- sardine(
+  ewas_sumstats   = "ewas_sumstats.tsv",
+  clock           = "clock_weights.tsv",
+  DNAm_cov_matrix = "dnam_covariance.tsv"
+)
+result                    # the estimates
+attr(result, "metadata")  # CpG overlap counts and Var(Y) diagnostics
+```
+
+```python
+# Python
+import sardine
+
+result = sardine.sardine(
+    "ewas_sumstats.tsv",
+    clock="clock_weights.tsv",
+    DNAm_cov_matrix="dnam_covariance.tsv",
+)
+print(result)  # the estimates (also a DataFrame in result.results)
+result.metadata  # CpG overlap counts and Var(Y) diagnostics
 ```
 
 ## Algorithm overview
@@ -39,11 +64,13 @@ SARDINE computes the association between epigenetic clocks and phenotypes using 
 
 See [inputs.md](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md) for full details on every input, including file formats and accepted column names.
 
+The arguments have the same names and accept the same values in R and Python.
+
 | Argument | Required | Default | Accepted values | Description |
 | --- | --- | --- | --- | --- |
 | `ewas_sumstats` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#ewas-summary-statistics-ewas_sumstats)) | EWAS summary statistics: one effect estimate, SE and N per CpG |
 | `clock` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#clock-weights-clock)) | Clock weights: one weight per CpG |
-| `DNAm_cov_matrix` | yes | | file path, matrix or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (TODO: link our data once we share it), or compute your own from a reference population |
+| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (TODO: link our data once we share it), or compute your own |
 | `ewas_direction` | no | `"M~Y"` | `"M~Y"`, `"Y~M"` | Direction of the EWAS regression (outcome ~ exposure) |
 | `ewas_model` | no | `"linear"` | `"linear"`, `"logistic"`, `"cox"` | Regression model the EWAS used |
 | `ewas_DNAm_scale` | no | `"beta"` | `"beta"`, `"m"` | Methylation scale of the EWAS: beta values or M-values |
@@ -75,7 +102,7 @@ How `sardine()` routes inputs to final estimates.
 
 ### Outputs
 
-`sardine()` returns a table with one row per estimated parameter:
+`sardine()` returns a table with one row per estimated parameter (in Python, `result.results`):
 
 | `param` | `model` | Estimated when | Meaning |
 | --- | --- | --- | --- |
@@ -96,9 +123,9 @@ Its columns:
 | `p` | p-value for the estimate, testing the null hypothesis that the effect is 0 |
 | `neglog10p` | -log10(p) (provided due to underflow with very small p-values) |
 | `N` | EWAS sample size: the `N` argument if supplied, otherwise the median per-CpG N across the CpGs used |
-| `note` | Any notes about the specific settings for this row (e.g. log-odds vs log_HR), or `NA` |
+| `note` | Any notes about the specific settings for this row (e.g. log-odds vs log_HR), or `NA`/`None` |
 
-The result also carries a one-row metadata table, `attr(result, "metadata")` in R, with columns:
+The result also carries a one-row metadata table, `attr(result, "metadata")` in R and `result.metadata` in Python, with columns:
 
 | Column | Description |
 | --- | --- |
@@ -129,39 +156,48 @@ Set up once with `pixi install` (or let `pixi run` do it lazily on first use). T
 
 Run any command inside an environment with `pixi run -e <env> <command>`, or drop into an interactive shell with `pixi shell -e <env>`.
 
-TODO: update the pixi.toml and these notes as packages are added.
-
 ### Running the tests
 
 | Command | What it checks |
 | --- | --- |
 | `pixi run -e dev test-r` | Every R test: all shared fixture cases plus the R-only tests (e.g. covariance matrix given as an R object) |
 | `pixi run -e dev check-r` | `R CMD check`: builds the package, runs `test-r` and the `example(sardine)` example, and checks the docs and package structure, as CRAN does |
-| `pixi run -e dev test-py` | Every Python test, including the same shared fixture cases |
-| `pixi run -e dev check-sync` | That `VERSION` and `fixtures/` match their copies in the packages |
+| `pixi run -e dev test-py` | Every Python test: all shared fixture cases plus the Python-only tests (e.g. covariance matrix given as a DataFrame) |
+| `pixi run -e dev check-py` | Runs `test-py`, builds the Python package, and checks that it will render correctly on PyPI (`twine check`). The Python counterpart of `check-r` |
+| `pixi run -e dev check-sync` | That the shared files match their copies in the packages |
 
-`test-r`, `check-r` and `build-r` all run `sync` first, so they always use the current `VERSION` and `fixtures/`.
+`test-r`, `check-r`, `build-r`, `test-py` and `build-py` all run `sync` first, so they always use the current shared files.
 
 ### Shared files
 
 The repo root holds the files both packages share; `pixi run -e dev sync` copies them into the packages, and `pixi run -e dev check-sync` fails if any copy is out of date:
 
-- `VERSION`: the single version number for both packages, copied into `r/DESCRIPTION` and `python/pyproject.toml`
-- `fixtures/`: test inputs and expected outputs, copied into `r/inst/extdata/fixtures/` because `R CMD check` cannot see files outside `r/`. Edit fixtures in `fixtures/` only, never the copy in `r/inst/extdata/fixtures/`
+- `VERSION`: the single version number for both packages, copied into `r/DESCRIPTION` and `python/src/sardine/_version.py`
+- `fixtures/`: test inputs and expected outputs, copied into `r/inst/extdata/fixtures/` because `R CMD check` cannot see files outside `r/`. The inputs at `fixtures/inputs/` is also copied into `python/src/sardine/example_data/` for `sardine.example()`. The Python tests read `fixtures/` directly, and the Python build copies it into `tests/fixtures/` inside the sdist, so the tests can also run from an unpacked sdist (e.g. for conda-forge)
+- `README.md` and `LICENSE`: copied into `python/`, because the Python build cannot see files outside `python/` and PyPI shows the README as the package description
+
+Edit these only at the repo root, never their copies.
 
 Fixtures:
 
-- Each fixture case is checked for its results, metadata, error message and printed stdout/stderr (`r/tests/testthat/test-fixtures.R`).
+- Each fixture case is checked for its results, metadata, error message and printed stdout/stderr, by `r/tests/testthat/test-fixtures.R` in R and `python/tests/test_fixtures.py` in Python
+- In the expected stdout/stderr, each warning is saved as a `Warning: <message>` line to account for the fact that R and Python print warnings differently.
+- The comparison skips the table rows printed under each `[INFO] ... header:` line, since their layout depends on each language's table printing
+- An error's message is compared against `<case>_error.txt`, not stderr
 - Regenerate fixtures: `pixi run -e dev generate-fixtures`. Only do this when an expected output should change (e.g. a bug fix), and review the diff
 - The version is stored as `<VERSION>` in the expected outputs so bumping the version never requires regenerating them, and time stamps are similarly stored as `<TIMESTAMP>`
 
 ### Python
 
-- Run the test suite: `pixi run -e dev test-py`
-- Build the package: `pixi run -e dev build-py` (produces a wheel + sdist under `python/dist/`)
+The Python package lives in `python/` (code in `python/src/sardine/`, tests in `python/tests/`). It mirrors the R package file for file (`utils.py` ↔ `utils.R`, `io.py` ↔ `io.R`, and so on, with `result.py` ↔ `print.R`) with the same function names.
+
+- Run all Python tests: `pixi run -e dev test-py` (see [Running the tests](#running-the-tests))
+- Build the package: `pixi run -e dev build-py`: builds `dist/sardine_ewas-<VERSION>-py3-none-any.whl` and `dist/sardine_ewas-<VERSION>.tar.gz`
+- Full package check: `pixi run -e dev check-py` (runs all Python tests, builds the package, and checks it will render correctly on PyPI)
 - Sanity-check a clean install in the minimal `user-python` environment, which has only the runtime dependencies:
-  1. `pixi run -e user-python python -m pip install python/dist/*.whl`
-  2. Run the example in the same environment (TODO: add an `example-py` task once the Python package exists)
+  1. `pixi run -e dev build-py`: builds the wheel
+  2. `pixi run -e user-python install-py`: installs that wheel and checks its declared dependencies are satisfied (`pip check`)
+  3. `pixi run -e user-python example-py`: runs `sardine.example()` on the bundled sample data, as a user would
 
 ### R
 
@@ -181,7 +217,7 @@ The R package lives in `r/` (code in `r/R/`, tests in `r/tests/testthat/`). `NAM
 The R and Python packages are always released together, with the same version number, and only once both pass the same fixtures.
 
 1. **Make and test the change in both packages.** Any change to behavior, inputs or outputs goes into both the R and Python code. If the change should alter an expected output, update `fixtures/` (manually or via `generate-fixtures` or a new case) and check that both packages match it.
-2. **Bump `VERSION`** at the repo root, following [semantic versioning](https://semver.org): patch (`0.1.1`) for bug fixes, minor (`0.2.0`) for new features, major (`1.0.0`) for changes that break existing code. Use plain `X.Y.Z`, which is valid for both CRAN and PyPI. Never edit the version in `r/DESCRIPTION` or `python/pyproject.toml` directly.
+2. **Bump `VERSION`** at the repo root, following [semantic versioning](https://semver.org): patch (`0.1.1`) for bug fixes, minor (`0.2.0`) for new features, major (`1.0.0`) for changes that break existing code. Use plain `X.Y.Z`, which is valid for both CRAN and PyPI. Never edit the version in `r/DESCRIPTION` or `python/src/sardine/_version.py` directly.
 3. **Add an entry to [CHANGELOG.md](https://github.com/qlu-lab/SARDINE/blob/main/CHANGELOG.md)** under the new version.
 4. **Sync and regenerate:**
    - `pixi run -e dev sync`
@@ -190,7 +226,7 @@ The R and Python packages are always released together, with the same version nu
    - `pixi run -e dev check-sync`
    - `pixi run -e dev check-r`: runs all R tests and the example, plus CRAN's package checks; aim for 0 errors, 0 warnings, 0 notes
    - `devtools::check_win_devel("r")` for CRAN's other platforms (results arrive by email)
-   - `pixi run -e dev test-py`
+   - `pixi run -e dev check-py`: runs all Python tests, builds the package, and checks it will render correctly on PyPI
    - Install both built packages in the clean `user-r` and `user-python` environments and run the examples (see the R and Python sections above)
 6. **Commit, tag and push:**
    - `git commit -am "Release vX.Y.Z"`
@@ -198,5 +234,7 @@ The R and Python packages are always released together, with the same version nu
    - `git push && git push --tags`
 7. **Publish both packages**, within the same day where possible:
    - R: from `r/`, run `devtools::submit_cran()`, then confirm the submission from the email CRAN sends the maintainer. CRAN review can take a few days, and they may ask for changes; if so, make them, bump the patch version, and repeat from step 2 for both packages.
-   - Python: `pixi run -e dev build-py`, then `twine upload python/dist/*`
+   - Python: `pixi run -e dev build-py`, then `pixi run -e dev twine upload dist/sardine_ewas-*`
+     - Uploading needs a PyPI API token (create one under your PyPI account settings, then enter `__token__` as the username and the token as the password, or save them in `~/.pypirc`).
+     - Can first upload to TestPyPI first (`twine upload --repository testpypi dist/sardine_ewas-*`, with a separate TestPyPI account) and install from there (`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ sardine-ewas`) to check the package page and install
    - GitHub: create a release from the `vX.Y.Z` tag, with the CHANGELOG entry as its notes.

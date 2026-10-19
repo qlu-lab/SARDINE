@@ -2,8 +2,10 @@
 Sync shared, repo-level files into the R and Python packages.
 
 The repo root holds the single source of truth for:
-  - VERSION      -> r/DESCRIPTION (Version:), python/pyproject.toml (version =)
-  - fixtures/    -> r/inst/extdata/fixtures/ (R CMD check cannot see ../fixtures)
+  - VERSION           -> r/DESCRIPTION (Version:), python/src/sardine/_version.py (__version__ =)
+  - fixtures/         -> r/inst/extdata/fixtures/ (R CMD check cannot see ../fixtures)
+  - fixtures/inputs/  -> python/src/sardine/example_data/ (sample data for sardine.example())
+  - README.md, LICENSE -> python/ (the Python build cannot see files outside python/)
 
 Usage:
   python tools/sync.py           # write the copies
@@ -21,11 +23,18 @@ ROOT = Path(__file__).resolve().parent.parent
 
 VERSION_FILE = ROOT / "VERSION"
 R_DESCRIPTION = ROOT / "r" / "DESCRIPTION"
-PY_PYPROJECT = ROOT / "python" / "pyproject.toml"
+PY_VERSION_FILE = ROOT / "python" / "src" / "sardine" / "_version.py"
 
-FIXTURES_SRC = ROOT / "fixtures"
-FIXTURES_DST = ROOT / "r" / "inst" / "extdata" / "fixtures"
-FIXTURE_ITEMS = ["test_manifest.tsv", "inputs", "expected"]
+# (source, copy) pairs; directories are mirrored, files copied
+R_FIXTURES = ROOT / "r" / "inst" / "extdata" / "fixtures"
+COPIES = [
+    (ROOT / "fixtures" / "test_manifest.tsv", R_FIXTURES / "test_manifest.tsv"),
+    (ROOT / "fixtures" / "inputs", R_FIXTURES / "inputs"),
+    (ROOT / "fixtures" / "expected", R_FIXTURES / "expected"),
+    (ROOT / "fixtures" / "inputs", ROOT / "python" / "src" / "sardine" / "example_data"),
+    (ROOT / "README.md", ROOT / "python" / "README.md"),
+    (ROOT / "LICENSE", ROOT / "python" / "LICENSE"),
+]
 
 
 def read_version():
@@ -83,15 +92,14 @@ def dirs_differ(src, dst):
     return any(not filecmp.cmp(src / f, dst / f, shallow=False) for f in src_files)
 
 
-def sync_fixtures(check):
+def sync_copies(check):
     """
-    Mirror the fixture items into the R package.
+    Mirror each source in COPIES to its copy.
 
-    Returns True if they were out of date.
+    Returns True if any copy was out of date.
     """
     stale = False
-    for item in FIXTURE_ITEMS:
-        src, dst = FIXTURES_SRC / item, FIXTURES_DST / item
+    for src, dst in COPIES:
         differs = (
             dirs_differ(src, dst)
             if src.is_dir()
@@ -130,9 +138,9 @@ def main():
             R_DESCRIPTION, r"^Version:\s*(\S+)\s*$", version, args.check
         ),
         sync_version_field(
-            PY_PYPROJECT, r'^version\s*=\s*"([^"]+)"', version, args.check
+            PY_VERSION_FILE, r'^__version__\s*=\s*"([^"]+)"', version, args.check
         ),
-        sync_fixtures(args.check),
+        sync_copies(args.check),
     ]
 
     if args.check and any(stale):

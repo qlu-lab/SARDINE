@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sardine-ewas"
+# The version lives in src/sardine/_version.py, which `pixi run -e dev sync` writes from the repo's VERSION file
+dynamic = ["version"]
+description = "Epigenetic clock and phenotype associations from EWAS summary statistics"
+# README.md and LICENSE are copies of the repo-level files, written by `pixi run -e dev sync`
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "Ryan Moreno", email = "rrmoreno@wisc.edu" },
+    { name = "Yuchang Wu", email = "ywu423@wisc.edu" },
+]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scipy>=1.9",
+]
+keywords = ["epigenetics", "epigenetic clock", "EWAS", "DNA methylation", "summary statistics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Homepage = "https://github.com/qlu-lab/SARDINE"
+Issues = "https://github.com/qlu-lab/SARDINE/issues"
+Changelog = "https://github.com/qlu-lab/SARDINE/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/sardine/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sardine"]
+
+[tool.hatch.build.targets.sdist]
+# The tests ship in the sdist so that anyone rebuilding from source (e.g. conda-forge)
+# can run them. They need the shared fixtures, which live outside python/ in the repo,
+# so the build copies them into tests/fixtures/ inside the sdist (the wheel is unaffected)
+include = ["src/sardine", "tests", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../fixtures/test_manifest.tsv" = "tests/fixtures/test_manifest.tsv"
+"../fixtures/inputs" = "tests/fixtures/inputs"
+"../fixtures/expected" = "tests/fixtures/expected"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

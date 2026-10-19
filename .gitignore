@@ -7,3 +7,7 @@
 # Python build output
 dist/
 __pycache__/
+
+# Python test and packaging leftovers
+.pytest_cache/
+*.egg-info/

@@ -15,6 +15,9 @@
 #' `gamma_logistic`, a log-odds ratio. Cox-model inputs additionally
 #' yield `log_HR`, a clock-level log hazard ratio. All rows share the same Z
 #' statistic and p-value by construction.
+#' 
+#' See <https://github.com/qlu-lab/SARDINE/blob/main/inputs.md> for details on
+#' every input.
 #'
 #' @param ewas_sumstats EWAS summary statistics: can be a dir/to/file or a
 #'   data.table, data.frame; must contain columns CpG, BETA, SE, and N.
@@ -30,9 +33,7 @@
 #'   of clock on phenotype.
 #'
 #'   For all four options above, matching ignores case and whitespace
-#'   (e.g. `"y ~ m"` is accepted as `"Y~M"`). See
-#'   <https://github.com/qlu-lab/SARDINE/blob/main/inputs.md> for details on
-#'   every input.
+#'   (e.g. `"y ~ m"` is accepted as `"Y~M"`).
 #' @param clock Epigenetic clock weights: can be a dir/to/clock/file or a 
 #'   data.frame/data.table; must contain columns CpG, CoefficientTraining.
 #' @param DNAm_cov_matrix Variance-covariance matrix for DNAm. Must have the
@@ -202,7 +203,7 @@ sardine <- function(ewas_sumstats,
 
     # Warn that it's recommended varY be inferred for Cox models
     if (!is.null(varY)) {
-      log_message(verbose, "WARN", "ewas_model = 'cox' with user-supplied varY: `kappa_cox` no longer cancels, so `log_hr` is sensitive to `cox_pi`. Setting varY = NULL is recommended.")
+      log_message(verbose, "WARN", "ewas_model = 'cox' with user-supplied varY: `kappa_cox` no longer cancels, so `log_hr` is sensitive to `cox_pi`. Leaving varY unset is recommended.")
     }
   }
 
@@ -252,7 +253,7 @@ sardine <- function(ewas_sumstats,
     stop("[ERROR] 'varY' must be non-negative", call. = FALSE)
   }
   if (!is.null(varY)) {
-    log_message(verbose, "WARN", "User-supplied varY must be the variance of the phenotype after adjusting for the same covariates as the EWAS (the raw phenotype variance only if the EWAS had no covariates). Set varY = NULL to estimate it from the EWAS summary statistics instead.")
+    log_message(verbose, "WARN", "User-supplied varY must be the variance of the phenotype after adjusting for the same covariates as the EWAS (the raw phenotype variance only if the EWAS had no covariates). Leave varY unset to estimate it from the EWAS summary statistics instead.")
   }
 
   # ============================================================

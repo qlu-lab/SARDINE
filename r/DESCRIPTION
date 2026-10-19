@@ -19,6 +19,7 @@ Depends:
     R (>= 4.0.0)
 Imports:
     data.table,
+    R.utils,
     stats,
     utils
 Suggests:

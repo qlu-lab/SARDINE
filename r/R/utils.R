@@ -33,7 +33,7 @@ log_message <- function(verbose, level, fmt, ...) {
   return(invisible(NULL))
 }
 
-#' Log a preview of a table: a blank line, an "[INFO] <label>:" line, then the
+#' Log a preview of a table: a blank line, an `[INFO] <label>:` line, then the
 #' table as print() would show it
 #'
 #' @param verbose Logical. When `FALSE` nothing is printed.

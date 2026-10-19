@@ -21,9 +21,18 @@ scipy = "*"
 # user-python for the built-wheel sanity check, same as a real user's env
 pip = "*"
 
+# Install the wheel built by `build-py` (for the current VERSION), check that its
+# declared dependencies are satisfied, and run sardine.example() on the bundled
+# sample data. Run these in user-python to confirm the package works with only
+# its declared dependencies.
+[feature.python-runtime.tasks]
+install-py = '''python -c "import subprocess, sys; v = open('VERSION').read().strip(); subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', f'dist/sardine_ewas-{v}-py3-none-any.whl']); subprocess.check_call([sys.executable, '-m', 'pip', 'check'])" '''
+example-py = '''python -c "import sardine; print(sardine.example())" '''
+
 [feature.r-runtime.dependencies]
 r-base = "*"
 "r-data.table" = "*"
+"r-r.utils" = "*" # lets data.table::fread() read .gz-compressed inputs
 
 # Install the tarball built by `build-r` (for the current VERSION) and run
 # sardine()'s help-page example on the bundled sample data. Run these in
@@ -43,8 +52,14 @@ python-build = "*"
 twine = "*"
 
 [feature.python-dev.tasks]
-test-py = "pytest python/tests"
-build-py = "python -m build python"
+# test-py and build-py first sync VERSION, README.md, LICENSE and the example data into python/
+# test-py runs every Python test: the shared fixtures plus the Python-only tests in python/tests/
+test-py = { cmd = "pytest python/tests", depends-on = ["sync"] }
+# writes dist/sardine_ewas-<VERSION>-py3-none-any.whl and dist/sardine_ewas-<VERSION>.tar.gz
+build-py = { cmd = "python -m build python --no-isolation --outdir dist", depends-on = ["sync"] }
+# the Python counterpart of check-r: runs every Python test, builds the package, and checks that
+# the built wheel and sdist will render correctly on PyPI (twine check)
+check-py = { cmd = "twine check dist/sardine_ewas-*", depends-on = ["test-py", "build-py"] }
 
 [feature.r-dev.dependencies]
 r-devtools = "*"
@@ -63,11 +78,11 @@ check-r = { cmd = "Rscript -e 'devtools::check(\"r\")'", depends-on = ["sync"] }
 # writes dist/sardine_<VERSION>.tar.gz
 build-r = { cmd = "Rscript -e 'dir.create(\"dist\", showWarnings = FALSE); devtools::build(\"r\", path = \"dist\")'", depends-on = ["sync"] }
 
-# Tasks that maintain the files shared by both packages (VERSION, fixtures/)
+# Tasks that maintain the files shared by both packages (VERSION, fixtures/, README.md, LICENSE)
 [feature.dev-shared.tasks]
 # writes the shared expected outputs in fixtures/, using the R package as the reference implementation
 generate-fixtures = "Rscript fixtures/generate_fixtures.R"
-# copy VERSION and fixtures/ into the R and Python packages; --check only reports but doesn't copy
+# copy the shared files into the R and Python packages; --check only reports but doesn't copy
 sync = "python tools/sync.py"
 check-sync = "python tools/sync.py --check"
 
