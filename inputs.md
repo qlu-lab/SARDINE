@@ -62,7 +62,7 @@ An intercept row (a CpG ID of `(Intercept)` or `intercept`, in any case) is drop
 
 ### DNAm covariance matrix (`DNAm_cov_matrix`)
 
-The CpG-by-CpG covariance matrix of DNA methylation in a reference population. It should be computed with the same covariate adjustment as the EWAS. You can use the reference matrices shared with SARDINE (TODO: link once shared) or compute your own.
+The CpG-by-CpG covariance matrix of DNA methylation in a reference population. It should be computed with the same covariate adjustment as the EWAS. You can use the reference matrices shared with SARDINE (downloadable [here](https://qlu-lab.org/data.html)) or compute your own.
 
 As a delimited file, the first column holds the CpG IDs and the header lists the same CpG IDs in the same order:
 

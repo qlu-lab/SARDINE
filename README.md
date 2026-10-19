@@ -115,7 +115,7 @@ The arguments have the same names and accept the same values in R and Python.
 | --- | --- | --- | --- | --- |
 | `ewas_sumstats` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#ewas-summary-statistics-ewas_sumstats)) | EWAS summary statistics: one effect estimate, SE and N per CpG |
 | `clock` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#clock-weights-clock)) | Clock weights: one weight per CpG |
-| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (TODO: link our data once we share it), or compute your own |
+| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (downloadable [here](https://qlu-lab.org/data.html)), or compute your own |
 | `ewas_direction` | no | `"M~Y"` | `"M~Y"`, `"Y~M"` | Direction of the EWAS regression (outcome ~ exposure) |
 | `ewas_model` | no | `"linear"` | `"linear"`, `"logistic"`, `"cox"` | Regression model the EWAS used |
 | `ewas_DNAm_scale` | no | `"beta"` | `"beta"`, `"m"` | Methylation scale of the EWAS: beta values or M-values |
