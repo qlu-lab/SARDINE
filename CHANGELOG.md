@@ -2,7 +2,7 @@
 
 All notable changes to SARDINE are listed here. The R (`sardine`) and Python (`sardine-ewas`) packages share one version number and are released together. Versions follow [semantic versioning](https://semver.org).
 
-## 0.1.0 (unreleased)
+## 0.1.0
 
 First public release.
 

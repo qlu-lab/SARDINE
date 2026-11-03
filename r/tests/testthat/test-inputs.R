@@ -26,3 +26,20 @@ test_that("read_dnam_covariance rejects mismatched names, text columns and other
   expect_error(read_dnam_covariance(1:3, verbose = FALSE), "must be a delimited file")
   expect_error(read_dnam_covariance("does_not_exist.tsv", verbose = FALSE), "File not found")
 })
+
+test_that("files with leading '#' lines give the same result as files without", {
+  # The M-value setup reads all four input files (EWAS, clock, Sigma, mean beta)
+  input <- function(name) system.file("extdata", "fixtures", "inputs", name, package = "sardine")
+  run <- function(suffix) {
+    sardine(
+      input(paste0("ewas_sumstats_baseline_synthetic", suffix, ".tsv")),
+      clock = input(paste0("clock_weights_baseline_synthetic", suffix, ".tsv")),
+      DNAm_cov_matrix = input(paste0("sigma_baseline_synthetic", suffix, ".tsv")),
+      mean_beta = input(paste0("mean_beta_ref_baseline_synthetic", suffix, ".tsv")),
+      ewas_DNAm_scale = "m",
+      verbose = FALSE
+    )
+  }
+
+  expect_identical(run("_with_header"), run(""))
+})

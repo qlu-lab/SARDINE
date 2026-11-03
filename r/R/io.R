@@ -40,6 +40,23 @@ standardize_column_name <- function(dt, pattern, standard_name, col_optional = F
   invisible(dt)
 }
 
+#' Count the lines starting with '#' at the top of a file
+#'
+#' @param path Path to a file. `file()` decompresses gzip/bzip2/xz transparently.
+#'
+#' @return The number of consecutive lines starting with `#` before the first
+#'   line that does not.
+#' @noRd
+count_leading_comment_lines <- function(path) {
+  con <- file(path, "r")
+  on.exit(close(con))
+  n <- 0L
+  while (length(line <- readLines(con, n = 1L, warn = FALSE)) == 1L && startsWith(line, "#")) {
+    n <- n + 1L
+  }
+  n
+}
+
 #' Coerce a file path or in-memory table to a data.table
 #'
 #' @param input A file path, `data.frame`, or `data.table`.
@@ -54,8 +71,11 @@ standardize_column_name <- function(dt, pattern, standard_name, col_optional = F
 read_delimited_table <- function(input, table_name) {
   if (is.character(input) && length(input) == 1L) {
     if (file.exists(input)) {
+      # Skip any leading '#' lines; with none, keep fread's default skip = "__auto__"
+      n_comment_lines <- count_leading_comment_lines(input)
+      skip <- if (n_comment_lines > 0L) n_comment_lines else "__auto__"
       return(tryCatch(
-        data.table::fread(input),
+        data.table::fread(input, skip = skip),
         error = function(e) {
           stop("\nERROR!Failed to read ", table_name, " as a data.table: ", conditionMessage(e), call. = FALSE)
         }

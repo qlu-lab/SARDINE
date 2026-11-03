@@ -62,14 +62,21 @@ def _open_text(path):
 def _read_delimited_file(path):
     """Read a delimited file, detecting the delimiter from the header line the way
     data.table::fread() does for the common cases (tab, comma, semicolon, pipe,
-    otherwise whitespace)."""
+    otherwise whitespace). Any leading lines starting with '#' are skipped."""
+    n_comment_lines = 0
+    header = ""
     with _open_text(path) as f:
-        header = f.readline()
+        for header in f:
+            if not header.startswith("#"):
+                break
+            n_comment_lines += 1
     counts = {sep: header.count(sep) for sep in ["\t", ",", ";", "|"]}
     sep = max(counts, key=counts.get)
     if counts[sep] == 0:
         sep = r"\s+"
-    return pd.read_csv(path, sep=sep, float_precision="round_trip")
+    return pd.read_csv(
+        path, sep=sep, skiprows=n_comment_lines, float_precision="round_trip"
+    )
 
 
 def read_delimited_table(input, table_name):

@@ -7,6 +7,7 @@ import pytest
 from _fixtures_dir import FIXTURES_DIR
 from sardine.io import read_dnam_covariance
 
+import sardine
 from sardine import SardineError
 
 SIGMA_TSV = FIXTURES_DIR / "inputs" / "sigma_baseline_synthetic.tsv"
@@ -60,3 +61,22 @@ def test_read_dnam_covariance_rejects_mismatched_names_text_columns_and_other_ty
 
     with pytest.raises(SardineError, match="can only be read by the R package"):
         read_dnam_covariance(str(tmp_path / "sigma.rds"), verbose=False)
+
+
+def test_files_with_leading_comment_lines_give_the_same_result():
+    # The M-value setup reads all four input files (EWAS, clock, Sigma, mean beta)
+    inputs = FIXTURES_DIR / "inputs"
+
+    def run(suffix):
+        return sardine.sardine(
+            str(inputs / f"ewas_sumstats_baseline_synthetic{suffix}.tsv"),
+            clock=str(inputs / f"clock_weights_baseline_synthetic{suffix}.tsv"),
+            DNAm_cov_matrix=str(inputs / f"sigma_baseline_synthetic{suffix}.tsv"),
+            mean_beta=str(inputs / f"mean_beta_ref_baseline_synthetic{suffix}.tsv"),
+            ewas_DNAm_scale="m",
+            verbose=False,
+        )
+
+    without_header, with_header = run(""), run("_with_header")
+    pd.testing.assert_frame_equal(with_header.results, without_header.results)
+    pd.testing.assert_frame_equal(with_header.metadata, without_header.metadata)

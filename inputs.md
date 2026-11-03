@@ -2,7 +2,7 @@
 
 This page describes every input to SARDINE: what it is, which values it accepts, and the file formats for tabular inputs. It applies to both the R and Python packages, which accept the same values and file formats.
 
-For a one-table overview of every input, its default and its accepted values, and for the valid combinations of EWAS model, direction and phenotype type, see the [Inputs section of the README](https://github.com/qlu-lab/SARDINE#inputs).
+For a one-table overview of every input, its default and its accepted values, and for the valid combinations of EWAS model, direction and phenotype type, see the [Inputs section of the main README](https://github.com/qlu-lab/SARDINE#inputs).
 
 ## Option values
 
@@ -26,7 +26,7 @@ Not every combination of these is valid; for example, a logistic or Cox EWAS mus
 
 ## Tabular inputs
 
-Every table can be given as a path to a delimited file (tab-, comma-, semicolon-, pipe- or whitespace-separated; a `.gz`-compressed file also works), in R as a `data.frame` or `data.table`, or in Python as a pandas `DataFrame`. Column names are matched case-insensitively against the names listed for each column.
+Every table can be given as a path to a delimited file (tab-, comma-, semicolon-, pipe- or whitespace-separated; a `.gz`-compressed file also works; any lines starting with `#` at the top of the file, such as a description of the data, are skipped), in R as a `data.frame` or `data.table`, or in Python as a pandas `DataFrame`. Column names are matched case-insensitively against the names listed for each column.
 
 ### EWAS summary statistics (`ewas_sumstats`)
 
