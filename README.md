@@ -77,7 +77,7 @@ Each option has the same name as the corresponding input (see [Inputs](#inputs) 
 sardine --ewas_sumstats FILE --clock FILE --DNAm_cov_matrix FILE --out PREFIX
         [--ewas_direction {M~Y,Y~M}] [--ewas_model {linear,logistic,cox}]
         [--ewas_DNAm_scale {beta,m}] [--ewas_pheno_type {continuous,binary}]
-        [--mean_beta FILE] [--varY NUMBER] [--N NUMBER]
+        [--mean_beta FILE] [--N NUMBER]
         [--cox_pi NUMBER] [--cox_E NUMBER] [--scale] [--age_adult NUMBER]
         [--quiet] [--example] [--version]
 ```
@@ -121,7 +121,7 @@ The arguments have the same names and accept the same values in R and Python.
 | `ewas_DNAm_scale` | no | `"beta"` | `"beta"`, `"m"` | Methylation scale of the EWAS: beta values or M-values |
 | `ewas_pheno_type` | no | `"continuous"` | `"continuous"`, `"binary"` | Phenotype type; binary also produces `gamma_logistic` |
 | `mean_beta` | only if `ewas_DNAm_scale = "m"` | none | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#mean-beta-values-mean_beta)) | Mean beta value per CpG, used to convert M-value sumstats to the beta scale |
-| `varY` | no | inferred | non-negative number | Phenotype variance, with the same covariate adjustment as the EWAS; estimated from the sumstats and covariance matrix if omitted |
+| `varY` | no | inferred | non-negative number | Residual phenotype (with the same covariate adjustment as in the EWAS) variance; estimated from the sumstats and covariance matrix if omitted; highly recommended you use default setting and let SARDINE estimate it |
 | `N` | no | median of the sumstats' `N` column | number | EWAS sample size |
 | `cox_pi` | for Cox, exactly one of `cox_pi` / `cox_E` | none | number strictly between 0 and 1 | Proportion of cases at the end of the study |
 | `cox_E` | for Cox, exactly one of `cox_pi` / `cox_E` | none | number $> 0$ | Number of cases at the end of the study |
@@ -170,7 +170,7 @@ Its columns:
 | `N` | EWAS sample size: the `N` argument if supplied, otherwise the median per-CpG N across the CpGs used |
 | `note` | Any notes about the specific settings for this row (e.g. log-odds vs log_HR), or `NA`/`None` |
 
-The result also carries a one-row metadata table, `attr(result, "metadata")` in R and `result.metadata` in Python, with columns:
+The result also carries a one-row metadata table for diagnostics, `attr(result, "metadata")` in R and `result.metadata` in Python, with columns:
 
 | Column | Description |
 | --- | --- |
@@ -182,9 +182,9 @@ The result also carries a one-row metadata table, `attr(result, "metadata")` in 
 | `ClockCpG_missed_ratio` | 1 - `ClockCpG_coverage_ratio` |
 | `cox_pi` | Proportion of cases at the end of the study, either input directly or computed from `cox_E`. `NA` if the EWAS model is not Cox |
 | `kappa_cox` | Cox conversion factor used to convert from the linear scale gamma to the Cox log hazard ratio. `NA` if the EWAS model is not Cox |
-| `varY` | Variance of the phenotype (after any capping), either input directly or estimated using the EWAS summary statistics and the DNAm reference matrix |
+| `varY` | Variance of the residual phenotype (adjusting for exactly the same set of covariates in EWAS), either input directly or estimated using the EWAS summary statistics and the DNAm reference matrix |
 | `varY_type` | `user_provided` or `inferred` |
-| `varY_ratio` | (varY prior to capping) / (theoretical max varY). The theoretical maximum is the varY you'd get if the clock explained all of the phenotype's variance |
+| `varY_ratio` | (varY prior to capping) / (theoretical max varY). The theoretical maximum is the varY you'd get if the clock explained all of the phenotype's variance. You should double-check when this ratio is very close to 1. |
 | `varY_note` | Note about whether varY had to be capped at the maximum theoretical phenotypic variance |
 
 ### Additional notes
