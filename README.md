@@ -4,8 +4,6 @@ This repository contains the source code for both the R package (`sardine`) and 
 
 ## Installation
 
-TODO: This won't work until published publicly.
-
 ```r
 # R
 install.packages("sardine")
@@ -103,7 +101,7 @@ sardine --ewas_sumstats ewas_logistic.tsv --clock clock_weights.tsv --DNAm_cov_m
 
 ## Algorithm overview
 
-SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole. See the accompanying manuscript [here](TODO: put link to preprint).
+SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole. See the accompanying manuscript [here](https://www.biorxiv.org/content/10.64898/2026.11.05.763758v1).
 
 ### Inputs
 
@@ -115,7 +113,7 @@ The arguments have the same names and accept the same values in R and Python.
 | --- | --- | --- | --- | --- |
 | `ewas_sumstats` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#ewas-summary-statistics-ewas_sumstats)) | EWAS summary statistics: one effect estimate, SE and N per CpG |
 | `clock` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#clock-weights-clock)) | Clock weights: one weight per CpG |
-| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (downloadable [here](https://qlu-lab.org/data.html)), or compute your own |
+| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (see [data availability](https://github.com/qlu-lab/SARDINE/blob/main/README.md#data-availability)), or compute your own |
 | `ewas_direction` | no | `"M~Y"` | `"M~Y"`, `"Y~M"` | Direction of the EWAS regression (outcome ~ exposure) |
 | `ewas_model` | no | `"linear"` | `"linear"`, `"logistic"`, `"cox"` | Regression model the EWAS used |
 | `ewas_DNAm_scale` | no | `"beta"` | `"beta"`, `"m"` | Methylation scale of the EWAS: beta values or M-values |
@@ -190,6 +188,17 @@ The result also carries a one-row metadata table for diagnostics, `attr(result, 
 ### Additional notes
 
 - See [this page](https://github.com/qlu-lab/SARDINE/blob/main/assets/cox_model_notes.md) for additional notes about using SARDINE with a Cox EWAS model.
+
+## Data availability
+
+The data associated with the SARDINE manuscript can be downloaded from Globus [here](https://app.globus.org/file-manager?origin_id=bf219067-1e45-45d8-b2ec-5fa04a8b507c&origin_path=publicly_shared_files) under the following file paths:
+
+- TruDiagnostic methylation data summary stats ([README](https://g-314ba8.dtn.globus.wisc.edu/publicly_shared_files/Projects/SARDINE/TruDiagnostic_methylation_data/README.md))
+  - Methylation covariance matrices (subset to clock CpGs): `Projects/SARDINE/TruDiagnostic_methylation_data/clock-specific_methylation_varcovar_matrices`
+  - Mean beta values: `Projects/SARDINE/TruDiagnostic_methylation_data/mean_beta`
+  - EWAS summary statistics generated from TruDiagnostic data: `Projects/SARDINE/TruDiagnostic_methylation_data/EWAS_sumstats`
+- Weights for the publicly-available clocks we analyzed ([README](https://g-314ba8.dtn.globus.wisc.edu/publicly_shared_files/Projects/SARDINE/clock_weights/README.md))
+  - File path within Globus: `Projects/SARDINE/clock_weights`
 
 ## Development infrastructure and environment management
 

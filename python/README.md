@@ -4,8 +4,6 @@ This repository contains the source code for both the R package (`sardine`) and 
 
 ## Installation
 
-TODO: This won't work until published publicly.
-
 ```r
 # R
 install.packages("sardine")
@@ -77,7 +75,7 @@ Each option has the same name as the corresponding input (see [Inputs](#inputs) 
 sardine --ewas_sumstats FILE --clock FILE --DNAm_cov_matrix FILE --out PREFIX
         [--ewas_direction {M~Y,Y~M}] [--ewas_model {linear,logistic,cox}]
         [--ewas_DNAm_scale {beta,m}] [--ewas_pheno_type {continuous,binary}]
-        [--mean_beta FILE] [--varY NUMBER] [--N NUMBER]
+        [--mean_beta FILE] [--N NUMBER]
         [--cox_pi NUMBER] [--cox_E NUMBER] [--scale] [--age_adult NUMBER]
         [--quiet] [--example] [--version]
 ```
@@ -103,7 +101,7 @@ sardine --ewas_sumstats ewas_logistic.tsv --clock clock_weights.tsv --DNAm_cov_m
 
 ## Algorithm overview
 
-SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole. See the accompanying manuscript [here](TODO: put link to preprint).
+SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole. See the accompanying manuscript [here](https://www.biorxiv.org/content/10.64898/2026.11.05.763758v1).
 
 ### Inputs
 
@@ -115,13 +113,13 @@ The arguments have the same names and accept the same values in R and Python.
 | --- | --- | --- | --- | --- |
 | `ewas_sumstats` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#ewas-summary-statistics-ewas_sumstats)) | EWAS summary statistics: one effect estimate, SE and N per CpG |
 | `clock` | yes | | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#clock-weights-clock)) | Clock weights: one weight per CpG |
-| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (downloadable [here](https://qlu-lab.org/data.html)), or compute your own |
+| `DNAm_cov_matrix` | yes | | file path or table; in R also a matrix or `.rds` file ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#dnam-covariance-matrix-dnam_cov_matrix)) | Reference DNAm variance-covariance matrix: use one of the reference matrices shared with SARDINE (see [data availability](https://github.com/qlu-lab/SARDINE/blob/main/README.md#data-availability)), or compute your own |
 | `ewas_direction` | no | `"M~Y"` | `"M~Y"`, `"Y~M"` | Direction of the EWAS regression (outcome ~ exposure) |
 | `ewas_model` | no | `"linear"` | `"linear"`, `"logistic"`, `"cox"` | Regression model the EWAS used |
 | `ewas_DNAm_scale` | no | `"beta"` | `"beta"`, `"m"` | Methylation scale of the EWAS: beta values or M-values |
 | `ewas_pheno_type` | no | `"continuous"` | `"continuous"`, `"binary"` | Phenotype type; binary also produces `gamma_logistic` |
 | `mean_beta` | only if `ewas_DNAm_scale = "m"` | none | file path or table ([format](https://github.com/qlu-lab/SARDINE/blob/main/inputs.md#mean-beta-values-mean_beta)) | Mean beta value per CpG, used to convert M-value sumstats to the beta scale |
-| `varY` | no | inferred | non-negative number | Phenotype variance, with the same covariate adjustment as the EWAS; estimated from the sumstats and covariance matrix if omitted |
+| `varY` | no | inferred | non-negative number | Residual phenotype (with the same covariate adjustment as in the EWAS) variance; estimated from the sumstats and covariance matrix if omitted; highly recommended you use default setting and let SARDINE estimate it |
 | `N` | no | median of the sumstats' `N` column | number | EWAS sample size |
 | `cox_pi` | for Cox, exactly one of `cox_pi` / `cox_E` | none | number strictly between 0 and 1 | Proportion of cases at the end of the study |
 | `cox_E` | for Cox, exactly one of `cox_pi` / `cox_E` | none | number $> 0$ | Number of cases at the end of the study |
@@ -170,7 +168,7 @@ Its columns:
 | `N` | EWAS sample size: the `N` argument if supplied, otherwise the median per-CpG N across the CpGs used |
 | `note` | Any notes about the specific settings for this row (e.g. log-odds vs log_HR), or `NA`/`None` |
 
-The result also carries a one-row metadata table, `attr(result, "metadata")` in R and `result.metadata` in Python, with columns:
+The result also carries a one-row metadata table for diagnostics, `attr(result, "metadata")` in R and `result.metadata` in Python, with columns:
 
 | Column | Description |
 | --- | --- |
@@ -182,14 +180,25 @@ The result also carries a one-row metadata table, `attr(result, "metadata")` in 
 | `ClockCpG_missed_ratio` | 1 - `ClockCpG_coverage_ratio` |
 | `cox_pi` | Proportion of cases at the end of the study, either input directly or computed from `cox_E`. `NA` if the EWAS model is not Cox |
 | `kappa_cox` | Cox conversion factor used to convert from the linear scale gamma to the Cox log hazard ratio. `NA` if the EWAS model is not Cox |
-| `varY` | Variance of the phenotype (after any capping), either input directly or estimated using the EWAS summary statistics and the DNAm reference matrix |
+| `varY` | Variance of the residual phenotype (adjusting for exactly the same set of covariates in EWAS), either input directly or estimated using the EWAS summary statistics and the DNAm reference matrix |
 | `varY_type` | `user_provided` or `inferred` |
-| `varY_ratio` | (varY prior to capping) / (theoretical max varY). The theoretical maximum is the varY you'd get if the clock explained all of the phenotype's variance |
+| `varY_ratio` | (varY prior to capping) / (theoretical max varY). The theoretical maximum is the varY you'd get if the clock explained all of the phenotype's variance. You should double-check when this ratio is very close to 1. |
 | `varY_note` | Note about whether varY had to be capped at the maximum theoretical phenotypic variance |
 
 ### Additional notes
 
 - See [this page](https://github.com/qlu-lab/SARDINE/blob/main/assets/cox_model_notes.md) for additional notes about using SARDINE with a Cox EWAS model.
+
+## Data availability
+
+The data associated with the SARDINE manuscript can be downloaded from Globus [here](https://app.globus.org/file-manager?origin_id=bf219067-1e45-45d8-b2ec-5fa04a8b507c&origin_path=publicly_shared_files) under the following file paths:
+
+- TruDiagnostic methylation data summary stats ([README](https://g-314ba8.dtn.globus.wisc.edu/publicly_shared_files/Projects/SARDINE/TruDiagnostic_methylation_data/README.md))
+  - Methylation covariance matrices (subset to clock CpGs): `Projects/SARDINE/TruDiagnostic_methylation_data/clock-specific_methylation_varcovar_matrices`
+  - Mean beta values: `Projects/SARDINE/TruDiagnostic_methylation_data/mean_beta`
+  - EWAS summary statistics generated from TruDiagnostic data: `Projects/SARDINE/TruDiagnostic_methylation_data/EWAS_sumstats`
+- Weights for the publicly-available clocks we analyzed ([README](https://g-314ba8.dtn.globus.wisc.edu/publicly_shared_files/Projects/SARDINE/clock_weights/README.md))
+  - File path within Globus: `Projects/SARDINE/clock_weights`
 
 ## Development infrastructure and environment management
 
