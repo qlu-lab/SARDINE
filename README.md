@@ -2,6 +2,16 @@
 
 This repository contains the source code for both the R package (`sardine`) and the Python package (`sardine-ewas`). Shared test fixtures ensure that the two packages behave the same, and both are released together under the same version number.
 
+## Algorithm overview
+
+SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole.
+
+## Citation
+
+If you use SARDINE, please cite the accompanying manuscript:
+
+Wu Y., Wang Y., Moreno R., Merrill S., Dwaraka V., Seale K., Smith R., Schmitz L., Lu Q. (2026). [SARDINE unlocks EWAS summary statistics for large-scale epigenetic biomarker analysis.](https://www.biorxiv.org/content/10.64898/2026.11.05.763758v1)  _bioRxiv_, 2026.11.05.763758.
+
 ## Installation
 
 ```r
@@ -99,9 +109,6 @@ sardine --ewas_sumstats ewas_logistic.tsv --clock clock_weights.tsv --DNAm_cov_m
         --out results/case_control
 ```
 
-## Algorithm overview
-
-SARDINE computes the association between epigenetic clocks and phenotypes using summary statistics from EWAS studies, clock weights, and a reference DNAm covariance matrix. In other words, SARDINE takes per-CpG effect estimates from EWAS summary statistics, combines them using clock weights and a covariance matrix, and outputs the effect estimate for the clock as a whole. See the accompanying manuscript [here](https://www.biorxiv.org/content/10.64898/2026.11.05.763758v1).
 
 ### Inputs
 
